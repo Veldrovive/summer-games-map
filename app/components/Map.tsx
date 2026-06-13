@@ -1,32 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
+import { useMemo, useState } from "react";
+import MapGL, { Marker, Popup, Source, Layer } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { BizCode, HomeCode, Badge } from "../hooks/useMapData";
-
-// Fix for default marker icon in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// Custom icons
-const createIcon = (color: string) => {
-  return new L.DivIcon({
-    className: 'custom-icon',
-    html: `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  });
-};
-
-const bizIcon = createIcon('#3b82f6'); // blue-500
-const homeIcon = createIcon('#10b981'); // emerald-500
-const badgeIcon = createIcon('#f59e0b'); // amber-500
-const checkedIcon = createIcon('#9ca3af'); // gray-400
+import { RoutePoint } from "../lib/RoutingEngine";
 
 type MapProps = {
   center: { lat: number; lon: number };
@@ -35,51 +14,149 @@ type MapProps = {
   badges: Badge[];
   checkedItems: Set<string>;
   onToggleCheck: (id: string) => void;
+  
+  // Routing props
+  routeMode: boolean;
+  routePoints: RoutePoint[];
+  routeGeoJSON: any;
+  onAddRoutePoint: (point: RoutePoint) => void;
 };
 
-// Component to recenter map when center changes
-function Recenter({ lat, lon }: { lat: number; lon: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lon], map.getZoom());
-  }, [lat, lon, map]);
-  return null;
-}
+// We use a free base map from Protomaps or standard OSM. 
+// Standard OSM raster tiles via MapLibre style JSON:
+const osmStyle = {
+  version: 8 as const,
+  sources: {
+    'osm': {
+      type: 'raster' as const,
+      tiles: [
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap Contributors',
+    }
+  },
+  layers: [
+    {
+      id: 'osm',
+      type: 'raster' as const,
+      source: 'osm',
+      minzoom: 0,
+      maxzoom: 22
+    }
+  ]
+};
 
-export default function Map({ center, bizcodes, homecodes, badges, checkedItems, onToggleCheck }: MapProps) {
+const createDot = (color: string, isChecked: boolean, isRouteSelected: boolean, seqNum?: number) => {
   return (
-    <MapContainer 
-      center={[center.lat, center.lon]} 
-      zoom={13} 
-      style={{ height: '100%', width: '100%', zIndex: 0 }}
+    <div style={{
+      backgroundColor: isRouteSelected ? '#8b5cf6' : (isChecked ? '#9ca3af' : color),
+      width: isRouteSelected ? '24px' : '16px',
+      height: isRouteSelected ? '24px' : '16px',
+      borderRadius: '50%',
+      border: isRouteSelected ? '3px solid white' : '2px solid white',
+      boxShadow: '0 0 4px rgba(0,0,0,0.4)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      transition: 'all 0.2s'
+    }}>
+      {seqNum !== undefined ? seqNum : ''}
+    </div>
+  );
+};
+
+export default function Map({ 
+  center, 
+  bizcodes, 
+  homecodes, 
+  badges, 
+  checkedItems, 
+  onToggleCheck,
+  routeMode,
+  routePoints,
+  routeGeoJSON,
+  onAddRoutePoint
+}: MapProps) {
+  const [popupInfo, setPopupInfo] = useState<any>(null);
+
+  const handleMarkerClick = (e: any, item: any, type: string) => {
+    e.originalEvent.stopPropagation();
+    
+    if (routeMode) {
+      const point: RoutePoint = {
+        id: item.code_id || `${type}-${item.lat}-${item.lon}`,
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+        name: type === 'biz' ? item.bizcode : (type === 'home' ? item.homecode : 'Badge')
+      };
+      onAddRoutePoint(point);
+    } else {
+      setPopupInfo({ ...item, type });
+    }
+  };
+
+  const getRouteSequenceNumber = (id: string) => {
+    const idx = routePoints.findIndex(p => p.id === id);
+    return idx !== -1 ? idx + 1 : undefined;
+  };
+
+  return (
+    <MapGL
+      initialViewState={{
+        longitude: center.lon,
+        latitude: center.lat,
+        zoom: 13
+      }}
+      style={{ width: '100%', height: '100%' }}
+      mapStyle={osmStyle}
+      mapLib={maplibregl}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Recenter lat={center.lat} lon={center.lon} />
+      {/* Route Layer */}
+      {routeGeoJSON && (
+        <Source type="geojson" data={routeGeoJSON}>
+          <Layer
+            id="route"
+            type="line"
+            paint={{
+              'line-color': '#3b82f6',
+              'line-width': 5,
+              'line-opacity': 0.7
+            }}
+          />
+        </Source>
+      )}
 
       {/* User Location Marker */}
-      <Marker position={[center.lat, center.lon]} icon={createIcon('#ef4444')}>
-        <Popup>Your Location</Popup>
+      <Marker longitude={center.lon} latitude={center.lat} anchor="center">
+        <div style={{
+          backgroundColor: '#ef4444',
+          width: '16px', height: '16px',
+          borderRadius: '50%',
+          border: '2px solid white',
+          boxShadow: '0 0 4px rgba(0,0,0,0.4)'
+        }} title="Your Location" />
       </Marker>
 
       {bizcodes.map((biz) => {
         const id = biz.code_id;
         const isChecked = checkedItems.has(id);
+        const seq = getRouteSequenceNumber(id);
         return (
-          <Marker key={`biz-${id}`} position={[parseFloat(biz.lat), parseFloat(biz.lon)]} icon={isChecked ? checkedIcon : bizIcon}>
-            <Popup>
-              <div className="text-sm min-w-[200px]">
-                <div dangerouslySetInnerHTML={{ __html: biz.bizcode }} className="mb-3 text-gray-800" />
-                <button 
-                  onClick={() => onToggleCheck(id)}
-                  className={`px-3 py-2 text-white rounded-md text-sm font-medium w-full transition-colors ${isChecked ? 'bg-gray-500 hover:bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'}`}
-                >
-                  {isChecked ? "✓ Checked Off (Undo)" : "Check Off"}
-                </button>
-              </div>
-            </Popup>
+          <Marker 
+            key={`biz-${id}`} 
+            longitude={parseFloat(biz.lon)} 
+            latitude={parseFloat(biz.lat)} 
+            anchor="center"
+            onClick={(e) => handleMarkerClick(e, biz, 'biz')}
+            style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
+          >
+            {createDot('#3b82f6', isChecked, seq !== undefined, seq)}
           </Marker>
         );
       })}
@@ -87,19 +164,17 @@ export default function Map({ center, bizcodes, homecodes, badges, checkedItems,
       {homecodes.map((home) => {
         const id = home.code_id || `home-${home.lat}-${home.lon}`;
         const isChecked = checkedItems.has(id);
+        const seq = getRouteSequenceNumber(id);
         return (
-          <Marker key={id} position={[parseFloat(home.lat), parseFloat(home.lon)]} icon={isChecked ? checkedIcon : homeIcon}>
-            <Popup>
-              <div className="text-sm min-w-[200px]">
-                {home.homecode && <div dangerouslySetInnerHTML={{ __html: home.homecode }} className="mb-3 text-gray-800" />}
-                <button 
-                  onClick={() => onToggleCheck(id)}
-                  className={`px-3 py-2 text-white rounded-md text-sm font-medium w-full transition-colors ${isChecked ? 'bg-gray-500 hover:bg-gray-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-                >
-                  {isChecked ? "✓ Checked Off (Undo)" : "Check Off"}
-                </button>
-              </div>
-            </Popup>
+          <Marker 
+            key={id} 
+            longitude={parseFloat(home.lon)} 
+            latitude={parseFloat(home.lat)} 
+            anchor="center"
+            onClick={(e) => handleMarkerClick(e, home, 'home')}
+            style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
+          >
+            {createDot('#10b981', isChecked, seq !== undefined, seq)}
           </Marker>
         );
       })}
@@ -107,23 +182,60 @@ export default function Map({ center, bizcodes, homecodes, badges, checkedItems,
       {badges.map((badge) => {
         const id = `badge-${badge.lat}-${badge.lon}`;
         const isChecked = checkedItems.has(id);
+        const seq = getRouteSequenceNumber(id);
         return (
-          <Marker key={id} position={[parseFloat(badge.lat), parseFloat(badge.lon)]} icon={isChecked ? checkedIcon : badgeIcon}>
-            <Popup>
-              <div className="text-sm flex flex-col items-center min-w-[200px]">
-                {badge.image && <img src={`https://aadl.org${badge.image}`} alt="Badge" className="w-20 h-20 object-contain mb-3 drop-shadow-md" />}
-                <div dangerouslySetInnerHTML={{ __html: badge.popup }} className="mb-3 text-center text-gray-800 font-medium" />
-                <button 
-                  onClick={() => onToggleCheck(id)}
-                  className={`px-3 py-2 text-white rounded-md text-sm font-medium w-full transition-colors ${isChecked ? 'bg-gray-500 hover:bg-gray-600' : 'bg-amber-600 hover:bg-amber-700'}`}
-                >
-                  {isChecked ? "✓ Checked Off (Undo)" : "Check Off"}
-                </button>
-              </div>
-            </Popup>
+          <Marker 
+            key={id} 
+            longitude={parseFloat(badge.lon)} 
+            latitude={parseFloat(badge.lat)} 
+            anchor="center"
+            onClick={(e) => handleMarkerClick(e, badge, 'badge')}
+            style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
+          >
+            {createDot('#f59e0b', isChecked, seq !== undefined, seq)}
           </Marker>
         );
       })}
-    </MapContainer>
+
+      {/* Popups */}
+      {popupInfo && !routeMode && (
+        <Popup
+          anchor="bottom"
+          longitude={parseFloat(popupInfo.lon)}
+          latitude={parseFloat(popupInfo.lat)}
+          onClose={() => setPopupInfo(null)}
+          closeButton={true}
+          closeOnClick={false}
+          maxWidth="250px"
+        >
+          <div className="text-sm min-w-[200px] pt-2">
+            {popupInfo.type === 'badge' && popupInfo.image && (
+              <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-20 h-20 object-contain mb-3 mx-auto drop-shadow-md" />
+            )}
+            <div 
+              dangerouslySetInnerHTML={{ 
+                __html: popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup) 
+              }} 
+              className={`mb-3 text-gray-800 ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''}`} 
+            />
+            
+            <button 
+              onClick={() => {
+                const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
+                onToggleCheck(id);
+                setPopupInfo(null);
+              }}
+              className={`px-3 py-2 text-white rounded-md text-sm font-medium w-full transition-colors ${
+                checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) 
+                  ? 'bg-gray-500 hover:bg-gray-600' 
+                  : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'))
+              }`}
+            >
+              {checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) ? "✓ Checked Off (Undo)" : "Check Off"}
+            </button>
+          </div>
+        </Popup>
+      )}
+    </MapGL>
   );
 }

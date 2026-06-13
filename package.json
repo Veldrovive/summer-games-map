@@ -9,13 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@types/leaflet": "^1.9.21",
-    "leaflet": "^1.9.4",
+    "@turf/turf": "^7.3.5",
+    "geojson-path-finder": "^2.1.0",
     "lucide-react": "^1.18.0",
+    "maplibre-gl": "^5.24.0",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-leaflet": "^5.0.0"
+    "react-map-gl": "^8.1.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -24,6 +25,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "node-fetch": "^3.3.2",
+    "osmtogeojson": "^3.0.0-beta.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

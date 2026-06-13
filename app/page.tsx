@@ -6,7 +6,8 @@ import { useMapData } from "./hooks/useMapData";
 import { useProgress } from "./hooks/useProgress";
 import { calculateDistance } from "./lib/distance";
 import { geocodeAddress } from "./lib/geocoding";
-import { Search, MapPin, SlidersHorizontal, CheckCircle2, Circle, Navigation, List } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2 } from "lucide-react";
+import { useRouting } from "./hooks/useRouting";
 
 // Dynamically import map to avoid SSR issues
 const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-100 font-medium text-gray-500">Loading Map...</div> });
@@ -26,6 +27,13 @@ export default function Home() {
   const [showBadges, setShowBadges] = useState(true);
   const [hideChecked, setHideChecked] = useState(false);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
+
+  // Routing
+  const [routeMode, setRouteMode] = useState(false);
+  const { 
+    routePoints, routeGeoJSON, isRouting, isEngineReady, 
+    addPoint, removePoint, clearRoute, calculateRoute, setAllVisible 
+  } = useRouting();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +88,25 @@ export default function Home() {
   }, [data, center, radius, showBiz, showHome, showBadges, hideChecked, checkedItems]);
 
   const totalVisible = filteredData.bizcodes.length + filteredData.homecodes.length + filteredData.badges.length;
+
+  const handlePlanAllVisible = () => {
+    // Collect all visible points
+    const allPoints = [
+      ...filteredData.bizcodes.map(b => ({ id: b.code_id, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: b.bizcode })),
+      ...filteredData.homecodes.map(h => ({ id: h.code_id || `home-${h.lat}-${h.lon}`, lat: parseFloat(h.lat), lon: parseFloat(h.lon), name: h.homecode || 'Home Code' })),
+      ...filteredData.badges.map(b => ({ id: `badge-${b.lat}-${b.lon}`, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: 'Badge' }))
+    ];
+    
+    // Sort by distance to center
+    allPoints.sort((a, b) => {
+      const distA = calculateDistance(center.lat, center.lon, a.lat, a.lon);
+      const distB = calculateDistance(center.lat, center.lon, b.lat, b.lon);
+      return distA - distB;
+    });
+
+    // Cap to 25 closest to avoid freezing TSP
+    setAllVisible(allPoints.slice(0, 25));
+  };
 
   if (loading) return <div className="h-screen w-screen flex items-center justify-center bg-gray-50 text-xl font-medium text-gray-700">Loading Map Data...</div>;
   if (error) return <div className="h-screen w-screen flex items-center justify-center bg-red-50 text-red-600 font-medium">Error loading data: {error.message}</div>;
@@ -195,6 +222,75 @@ export default function Home() {
             </div>
           </section>
 
+          {/* Route Builder */}
+          <section className={`p-5 rounded-xl border shadow-sm transition-colors ${routeMode ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-100'}`}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${routeMode ? 'text-indigo-700' : 'text-gray-500'}`}>
+                <RouteIcon className="w-4 h-4" /> Route Builder
+              </h2>
+              <button 
+                onClick={() => setRouteMode(!routeMode)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-md transition-colors ${routeMode ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                {routeMode ? 'Disable' : 'Enable'}
+              </button>
+            </div>
+            
+            {routeMode && (
+              <div className="space-y-4">
+                <p className="text-xs text-indigo-800 font-medium">
+                  {isEngineReady ? "Click markers on the map to add them to your route sequence." : "Loading routing engine..."}
+                </p>
+                
+                {routePoints.length > 0 && (
+                  <div className="bg-white rounded-lg border border-indigo-100 max-h-40 overflow-y-auto p-2 space-y-1">
+                    {routePoints.map((pt, i) => (
+                      <div key={pt.id} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                        <span className="font-bold text-gray-700 truncate mr-2">
+                          <span className="text-indigo-500 mr-1">{i + 1}.</span> 
+                          <span dangerouslySetInnerHTML={{ __html: pt.name || pt.id }} />
+                        </span>
+                        <button onClick={() => removePoint(pt.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-3 h-3" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => calculateRoute(false)} 
+                    disabled={!isEngineReady || routePoints.length < 2 || isRouting}
+                    className="flex items-center justify-center gap-1.5 bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+                  >
+                    {isRouting ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Play className="w-3 h-3" />} Calculate
+                  </button>
+                  <button 
+                    onClick={() => calculateRoute(true)} 
+                    disabled={!isEngineReady || routePoints.length < 3 || isRouting}
+                    className="flex items-center justify-center gap-1.5 bg-purple-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 shadow-sm"
+                  >
+                    <Wand2 className="w-3 h-3" /> TSP Optimize
+                  </button>
+                </div>
+                
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handlePlanAllVisible} 
+                    className="flex-1 bg-white border border-indigo-200 text-indigo-700 text-xs font-bold py-2 rounded-lg hover:bg-indigo-50"
+                  >
+                    Add Closest 25
+                  </button>
+                  <button 
+                    onClick={clearRoute} 
+                    className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-3 py-2 rounded-lg hover:bg-red-100"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
           {/* Progress Stats */}
           <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
@@ -240,6 +336,10 @@ export default function Home() {
               badges={filteredData.badges}
               checkedItems={checkedItems}
               onToggleCheck={toggleItem}
+              routeMode={routeMode}
+              routePoints={routePoints}
+              routeGeoJSON={routeGeoJSON}
+              onAddRoutePoint={addPoint}
             />
           </>
         ) : (
