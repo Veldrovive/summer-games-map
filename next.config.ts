@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: '/api/map-data',
+        destination: 'https://aadl.org/summergame/map/data/SummerGame2026',
+      },
+    ]
+  },
 };
 
 export default nextConfig;
