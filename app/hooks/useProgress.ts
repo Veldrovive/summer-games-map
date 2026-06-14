@@ -2,27 +2,46 @@ import { useState, useEffect, useCallback } from 'react';
 
 export type ItemStatus = 'found' | 'not_found' | 'entered';
 
-export type ItemMetadata = { notes?: string; code?: string };
+export type ProgressItem = {
+  status: ItemStatus;
+  updated_at: number;
+};
+
+export type ItemMetadata = { notes?: string; code?: string, updated_at?: number };
 
 export function useProgress() {
-  const [itemStatuses, setItemStatuses] = useState<Record<string, ItemStatus>>({});
+  const [progressState, setProgressState] = useState<Record<string, ProgressItem>>({});
   const [itemMetadata, setItemMetadataState] = useState<Record<string, ItemMetadata>>({});
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('aadl_progress_v2');
-      if (stored) {
-        setItemStatuses(JSON.parse(stored));
+      const storedV3 = localStorage.getItem('aadl_progress_v3');
+      if (storedV3) {
+        setProgressState(JSON.parse(storedV3));
       } else {
-        // Migration from v1
-        const oldStored = localStorage.getItem('aadl_progress');
-        if (oldStored) {
-          const parsed = JSON.parse(oldStored);
-          if (Array.isArray(parsed)) {
-            const migrated: Record<string, ItemStatus> = {};
-            parsed.forEach(id => { migrated[id] = 'found'; });
-            setItemStatuses(migrated);
-            localStorage.setItem('aadl_progress_v2', JSON.stringify(migrated));
+        // Migration from v2
+        const storedV2 = localStorage.getItem('aadl_progress_v2');
+        if (storedV2) {
+          const parsedV2 = JSON.parse(storedV2) as Record<string, ItemStatus>;
+          const migrated: Record<string, ProgressItem> = {};
+          const now = Date.now();
+          for (const [id, status] of Object.entries(parsedV2)) {
+            migrated[id] = { status, updated_at: now };
+          }
+          setProgressState(migrated);
+          localStorage.setItem('aadl_progress_v3', JSON.stringify(migrated));
+        } else {
+          // Migration from v1
+          const oldStored = localStorage.getItem('aadl_progress');
+          if (oldStored) {
+            const parsed = JSON.parse(oldStored);
+            if (Array.isArray(parsed)) {
+              const migrated: Record<string, ProgressItem> = {};
+              const now = Date.now();
+              parsed.forEach(id => { migrated[id] = { status: 'found', updated_at: now }; });
+              setProgressState(migrated);
+              localStorage.setItem('aadl_progress_v3', JSON.stringify(migrated));
+            }
           }
         }
       }
@@ -39,16 +58,33 @@ export function useProgress() {
     }
   }, []);
 
-  const setItemStatus = useCallback((id: string, status: ItemStatus | null) => {
-    setItemStatuses(prev => {
+  const setItemStatus = useCallback((id: string, status: ItemStatus | null, remoteTimestamp?: number) => {
+    setProgressState(prev => {
       const next = { ...prev };
+      
+      const newTimestamp = remoteTimestamp ?? Date.now();
+      
+      // If we are applying a remote update, only apply if newer
+      if (remoteTimestamp && prev[id] && prev[id].updated_at >= remoteTimestamp) {
+        return prev; // Ignore older remote updates
+      }
+
       if (status === null) {
         delete next[id];
       } else {
-        next[id] = status;
+        next[id] = { status, updated_at: newTimestamp };
       }
       try {
-        localStorage.setItem('aadl_progress_v2', JSON.stringify(next));
+        localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
+        
+        // If it's a local change, add to offline queue
+        if (!remoteTimestamp) {
+          const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+          queue.push({ type: 'status', id, status, updated_at: newTimestamp });
+          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+          
+          window.dispatchEvent(new CustomEvent('aadl_local_update'));
+        }
       } catch (e) {
          console.error("Failed to save progress", e);
       }
@@ -57,15 +93,27 @@ export function useProgress() {
   }, []);
 
   const toggleItem = useCallback((id: string) => {
-    setItemStatuses(prev => {
+    setProgressState(prev => {
       const next = { ...prev };
-      if (next[id] === 'found' || next[id] === 'entered') {
+      const current = next[id]?.status;
+      let newStatus: ItemStatus | null = null;
+      const now = Date.now();
+      
+      if (current === 'found' || current === 'entered') {
+        newStatus = null;
         delete next[id];
       } else {
-        next[id] = 'found';
+        newStatus = 'found';
+        next[id] = { status: 'found', updated_at: now };
       }
+      
       try {
-        localStorage.setItem('aadl_progress_v2', JSON.stringify(next));
+        localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
+        
+        const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+        queue.push({ type: 'status', id, status: newStatus, updated_at: now });
+        localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+        window.dispatchEvent(new CustomEvent('aadl_local_update'));
       } catch (e) {
          console.error("Failed to save progress", e);
       }
@@ -73,12 +121,27 @@ export function useProgress() {
     });
   }, []);
 
-  const setItemMetadata = useCallback((id: string, metadata: Partial<ItemMetadata>) => {
+  const setItemMetadata = useCallback((id: string, metadata: Partial<ItemMetadata>, remoteTimestamp?: number) => {
     setItemMetadataState(prev => {
       const next = { ...prev };
-      next[id] = { ...(next[id] || {}), ...metadata };
+      const newTimestamp = remoteTimestamp ?? Date.now();
+      
+      // If remote, only apply if newer
+      if (remoteTimestamp && prev[id] && prev[id].updated_at && prev[id].updated_at! >= remoteTimestamp) {
+        return prev;
+      }
+      
+      next[id] = { ...(next[id] || {}), ...metadata, updated_at: newTimestamp };
+      
       try {
         localStorage.setItem('aadl_metadata', JSON.stringify(next));
+        
+        if (!remoteTimestamp) {
+          const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+          queue.push({ type: 'metadata', id, metadata, updated_at: newTimestamp });
+          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+          window.dispatchEvent(new CustomEvent('aadl_local_update'));
+        }
       } catch (e) {
          console.error("Failed to save metadata", e);
       }
@@ -86,7 +149,13 @@ export function useProgress() {
     });
   }, []);
 
-  const checkedItems = new Set(Object.keys(itemStatuses).filter(k => itemStatuses[k] === 'found' || itemStatuses[k] === 'entered'));
+  // Compute a backwards-compatible itemStatuses for UI components
+  const itemStatuses: Record<string, ItemStatus> = {};
+  for (const [key, val] of Object.entries(progressState)) {
+    itemStatuses[key] = val.status;
+  }
 
-  return { itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata };
+  const checkedItems = new Set(Object.keys(progressState).filter(k => progressState[k]?.status === 'found' || progressState[k]?.status === 'entered'));
+
+  return { progressState, itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata };
 }

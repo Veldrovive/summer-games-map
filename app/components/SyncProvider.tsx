@@ -1,0 +1,142 @@
+"use client";
+
+import { useState, ReactNode } from "react";
+import { useSync } from "../hooks/useSync";
+import { Users, WifiOff, X, Copy, Check } from "lucide-react";
+
+export function SyncProvider({ children }: { children: ReactNode }) {
+  const { shareCode, isConnected, syncEntered, joinShare, leaveShare, toggleSyncEntered } = useSync();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inputCode, setInputCode] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const handleCreate = async () => {
+    try {
+      // In a real app we'd call the API to generate, but we can also just generate client side and join
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      joinShare(code);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (shareCode) {
+      await navigator.clipboard.writeText(shareCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <>
+      {shareCode && !isConnected && (
+        <div className="bg-red-500 text-white text-xs font-bold px-4 py-2 flex items-center justify-center gap-2 relative z-[9999]">
+          <WifiOff className="w-4 h-4" /> Sync Disconnected. Changes saved offline.
+        </div>
+      )}
+      
+      {/* Floating Share Button */}
+      <button 
+        onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-4 right-4 z-[9990] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2"
+      >
+        <Users className="w-5 h-5" />
+        {shareCode ? <span className="font-bold pr-1">{shareCode}</span> : null}
+      </button>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" /> Share Codes
+              </h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {shareCode ? (
+                <div className="space-y-6">
+                  <div className="text-center space-y-2">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Current Share Code</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="text-4xl font-extrabold text-blue-700 tracking-widest bg-blue-50 py-3 px-6 rounded-xl border border-blue-100">
+                        {shareCode}
+                      </div>
+                      <button onClick={handleCopy} className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors">
+                        {copied ? <Check className="w-6 h-6 text-green-600" /> : <Copy className="w-6 h-6" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 font-medium">Status: {isConnected ? <span className="text-green-500">Connected</span> : <span className="text-red-500">Offline</span>}</p>
+                  </div>
+                  
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={syncEntered} 
+                      onChange={(e) => toggleSyncEntered(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-800 text-sm">Sync "Entered" Status</div>
+                      <div className="text-xs text-gray-500 font-medium leading-snug mt-0.5">If disabled, you won't receive other people's entered status, keeping your own tracker clean.</div>
+                    </div>
+                  </label>
+
+                  <button 
+                    onClick={leaveShare}
+                    className="w-full py-3 font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors text-sm"
+                  >
+                    Leave Share Group
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <h3 className="font-bold text-gray-800 text-sm">Join an existing group</h3>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={inputCode} 
+                        onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. ABCDEF"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-mono font-bold text-lg"
+                        maxLength={6}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (inputCode.length > 0) joinShare(inputCode);
+                        }}
+                        disabled={inputCode.length === 0}
+                        className="px-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+                      >
+                        Join
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-px bg-gray-200"></div>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">OR</span>
+                    <div className="flex-1 h-px bg-gray-200"></div>
+                  </div>
+                  
+                  <button 
+                    onClick={handleCreate}
+                    className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-md transition-colors"
+                  >
+                    Create New Share Code
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {children}
+    </>
+  );
+}
