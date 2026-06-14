@@ -6,8 +6,9 @@ import { useMapData } from "./hooks/useMapData";
 import { useProgress } from "./hooks/useProgress";
 import { calculateDistance } from "./lib/distance";
 import { geocodeAddress } from "./lib/geocoding";
-import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2 } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound } from "lucide-react";
 import { useRouting } from "./hooks/useRouting";
+import Link from "next/link";
 
 // Dynamically import map to avoid SSR issues
 const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-100 font-medium text-gray-500">Loading Map...</div> });
@@ -177,7 +178,6 @@ export default function Home() {
                 <span className="text-red-500/80 font-semibold text-xs">items not found</span>
               </div>
             </div>
-            
             <button
               onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
               className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
