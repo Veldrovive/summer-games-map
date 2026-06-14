@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type ItemStatus = 'found' | 'not_found';
+export type ItemStatus = 'found' | 'not_found' | 'entered';
 
 export function useProgress() {
   const [itemStatuses, setItemStatuses] = useState<Record<string, ItemStatus>>({});
@@ -48,7 +48,7 @@ export function useProgress() {
   const toggleItem = useCallback((id: string) => {
     setItemStatuses(prev => {
       const next = { ...prev };
-      if (next[id] === 'found') {
+      if (next[id] === 'found' || next[id] === 'entered') {
         delete next[id];
       } else {
         next[id] = 'found';
@@ -62,7 +62,7 @@ export function useProgress() {
     });
   }, []);
 
-  const checkedItems = new Set(Object.keys(itemStatuses).filter(k => itemStatuses[k] === 'found'));
+  const checkedItems = new Set(Object.keys(itemStatuses).filter(k => itemStatuses[k] === 'found' || itemStatuses[k] === 'entered'));
 
   return { itemStatuses, setItemStatus, toggleItem, checkedItems };
 }

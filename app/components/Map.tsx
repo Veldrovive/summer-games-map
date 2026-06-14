@@ -104,7 +104,7 @@ export default function Map({
       let bgColor = '#3b82f6';
       if (seq !== undefined) {
         bgColor = '#8b5cf6';
-      } else if (status === 'found') {
+      } else if (status === 'found' || status === 'entered') {
         bgColor = '#9ca3af';
       } else if (status === 'not_found') {
         bgColor = '#ef4444';
@@ -130,7 +130,7 @@ export default function Map({
 
       let bgColor = '#10b981';
       if (seq !== undefined) bgColor = '#8b5cf6';
-      else if (status === 'found') bgColor = '#9ca3af';
+      else if (status === 'found' || status === 'entered') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
       features.push({
@@ -153,7 +153,7 @@ export default function Map({
 
       let bgColor = '#f59e0b';
       if (seq !== undefined) bgColor = '#8b5cf6';
-      else if (status === 'found') bgColor = '#9ca3af';
+      else if (status === 'found' || status === 'entered') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
       features.push({
@@ -308,37 +308,55 @@ export default function Map({
                 />
               </div>
 
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
-                    const currentStatus = itemStatuses[id];
-                    onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
-                    setPopupInfo(null);
-                  }}
-                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found'
-                    ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
-                    : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-500 ring-offset-2' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500 ring-offset-2' : 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500 ring-offset-2'))
-                    }`}
-                >
-                  {itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found' ? "✓ Found (Undo)" : "Mark as Found"}
-                </button>
+              {(() => {
+                const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
+                const currentStatus = itemStatuses[id];
+                const isFoundOrEntered = currentStatus === 'found' || currentStatus === 'entered';
+                return (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex gap-2 w-full">
+                      <button
+                        onClick={() => {
+                          onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
+                          setPopupInfo(null);
+                        }}
+                        className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'found'
+                          ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
+                          : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'))
+                          }`}
+                      >
+                        {currentStatus === 'found' ? "✓ Found" : "Found"}
+                      </button>
 
-                <button
-                  onClick={() => {
-                    const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
-                    const currentStatus = itemStatuses[id];
-                    onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
-                    setPopupInfo(null);
-                  }}
-                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found'
-                    ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2'
-                    : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
-                    }`}
-                >
-                  {itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
-                </button>
-              </div>
+                      <button
+                        onClick={() => {
+                          onSetItemStatus(id, currentStatus === 'entered' ? null : 'entered');
+                          setPopupInfo(null);
+                        }}
+                        className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'entered'
+                          ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
+                          : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-800 hover:bg-amber-900'))
+                          }`}
+                      >
+                        {currentStatus === 'entered' ? "✓ Entered" : "Found & Entered"}
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
+                        setPopupInfo(null);
+                      }}
+                      className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${currentStatus === 'not_found'
+                        ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2'
+                        : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
+                        }`}
+                    >
+                      {currentStatus === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

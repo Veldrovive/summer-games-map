@@ -59,7 +59,7 @@ export default function Home() {
   const [showHome, setShowHome] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [hideChecked, setHideChecked] = useState(false);
-  const [viewMode, setViewMode] = useState<"map" | "list" | "filters">("map");
+  const [viewMode, setViewMode] = useState<"map" | "list" | "filters" | "found">("map");
 
   // Routing
   const [routeMode, setRouteMode] = useState(false);
@@ -349,24 +349,33 @@ export default function Home() {
           </section>
 
           {/* Progress Stats */}
-          <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
-              <span className="text-blue-600/80 font-semibold text-sm">items found</span>
+          <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col gap-4">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
+                <span className="text-blue-600/80 font-semibold text-sm">items found</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
+                <span className="text-red-500/80 font-semibold text-xs">items not found</span>
+              </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
-              <span className="text-red-500/80 font-semibold text-xs">items not found</span>
-            </div>
+            
+            <button
+              onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
+              className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
+            >
+              {viewMode === 'found' ? 'Return to Map' : 'View Found Codes'}
+            </button>
           </section>
 
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-1 relative h-full ${viewMode === 'map' || viewMode === 'list' ? 'block' : 'hidden md:block'}`}>
-        {viewMode !== 'list' ? (
+      <main className={`flex-1 relative h-full ${viewMode === 'map' || viewMode === 'list' || viewMode === 'found' ? 'block' : 'hidden md:block'}`}>
+        {viewMode === 'map' && (
           <>
             <div className="absolute top-6 left-6 z-[1000] bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-gray-200 font-bold text-gray-800 text-sm flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
@@ -386,7 +395,9 @@ export default function Home() {
               onAddRoutePoint={addPoint}
             />
           </>
-        ) : (
+        )}
+        
+        {viewMode === 'list' && (
           <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
             <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Locations List ({totalVisible})</h2>
             <p className="text-gray-500 font-medium mb-8">Showing locations within {radius} miles of your center point.</p>
@@ -395,10 +406,10 @@ export default function Home() {
               {filteredData.bizcodes.map(biz => {
                  const id = biz.code_id;
                  const status = itemStatuses[id];
-                 const isChecked = status === 'found';
+                 const isFoundOrEntered = status === 'found' || status === 'entered';
                  const isNotFound = status === 'not_found';
                  return (
-                   <div key={id} className={`p-5 rounded-2xl border transition-all flex flex-col ${isChecked ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : (isNotFound ? 'bg-red-50 border-red-200 opacity-90 scale-[0.98]' : 'bg-white border-blue-100 shadow-md hover:shadow-lg')}`}>
+                   <div key={id} className={`p-5 rounded-2xl border transition-all flex flex-col ${isFoundOrEntered ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : (isNotFound ? 'bg-red-50 border-red-200 opacity-90 scale-[0.98]' : 'bg-white border-blue-100 shadow-md hover:shadow-lg')}`}>
                       <div className="flex gap-4 items-start flex-col flex-1">
                         <div className="flex items-center gap-2 w-full">
                           <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0 ring-2 ring-blue-100"></div>
@@ -409,8 +420,8 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="w-full flex gap-2 mt-auto pt-4">
-                        <button onClick={() => setItemStatus(id, isChecked ? null : 'found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isChecked ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                          {isChecked ? '✓ Found' : 'Found'}
+                        <button onClick={() => setItemStatus(id, isFoundOrEntered ? null : 'found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isFoundOrEntered ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                          {isFoundOrEntered ? '✓ Found' : 'Found'}
                         </button>
                         <button onClick={() => setItemStatus(id, isNotFound ? null : 'not_found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isNotFound ? 'bg-red-500 text-white hover:bg-red-600 ring-2 ring-red-400 ring-offset-1' : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'}`}>
                           {isNotFound ? '✕ Missing' : 'Missing'}
@@ -419,7 +430,63 @@ export default function Home() {
                    </div>
                  );
               })}
-              {/* Similar logic for Home codes and badges could be added here for a comprehensive list view */}
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'found' && (
+          <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
+            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Found Codes ({checkedItems.size})</h2>
+            <p className="text-gray-500 font-medium mb-8">Codes you've found. Check them off once you've entered them on the Summer Game site.</p>
+            
+            <div className="flex flex-col gap-4 max-w-3xl">
+              {(() => {
+                const items: any[] = [];
+                data?.bizcodes.forEach(b => {
+                  const status = itemStatuses[b.code_id];
+                  if (status === 'found' || status === 'entered') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', status });
+                });
+                data?.homecodes.forEach(h => {
+                  const id = h.code_id || `home-${h.lat}-${h.lon}`;
+                  const status = itemStatuses[id];
+                  if (status === 'found' || status === 'entered') items.push({ id, title: h.homecode, type: 'Home', status });
+                });
+                data?.badges.forEach(b => {
+                  const id = `badge-${b.lat}-${b.lon}`;
+                  const status = itemStatuses[id];
+                  if (status === 'found' || status === 'entered') items.push({ id, title: 'Badge', type: 'Badge', status });
+                });
+                
+                items.sort((a, b) => {
+                  if (a.status === 'found' && b.status === 'entered') return -1;
+                  if (a.status === 'entered' && b.status === 'found') return 1;
+                  return 0;
+                });
+
+                if (items.length === 0) {
+                  return <div className="text-gray-500 bg-white p-6 rounded-xl border border-gray-200">You haven't found any codes yet.</div>;
+                }
+
+                return items.map(item => (
+                  <div key={item.id} className={`p-5 rounded-2xl border transition-all flex items-center gap-4 ${item.status === 'entered' ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
+                      </div>
+                      <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.status === 'entered' ? 'line-through' : ''}`} />
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer flex-shrink-0 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={item.status === 'entered'}
+                        onChange={(e) => setItemStatus(item.id, e.target.checked ? 'entered' : 'found')}
+                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-bold text-gray-700">Entered</span>
+                    </label>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         )}
@@ -446,6 +513,12 @@ export default function Home() {
             className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
           >
             <List className="w-4 h-4" /> List
+          </button>
+          <button 
+            onClick={() => setViewMode('found')} 
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'found' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
+          >
+            <CheckCircle2 className="w-4 h-4" /> Found
           </button>
         </div>
       </div>
