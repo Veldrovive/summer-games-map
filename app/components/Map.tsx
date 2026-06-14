@@ -4,16 +4,15 @@ import { useMemo, useState } from "react";
 import MapGL, { Marker, Source, Layer } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { BizCode, HomeCode, Badge } from "../hooks/useMapData";
-import { RoutePoint } from "../lib/RoutingEngine";
+import { ItemStatus } from "../hooks/useProgress";
 
 type MapProps = {
   center: { lat: number; lon: number };
   bizcodes: BizCode[];
   homecodes: HomeCode[];
   badges: Badge[];
-  checkedItems: Set<string>;
-  onToggleCheck: (id: string) => void;
+  itemStatuses: Record<string, ItemStatus>;
+  onSetItemStatus: (id: string, status: ItemStatus | null) => void;
   
   // Routing props
   routeMode: boolean;
@@ -49,10 +48,19 @@ const osmStyle = {
   ]
 };
 
-const createDot = (color: string, isChecked: boolean, isRouteSelected: boolean, seqNum?: number) => {
+const createDot = (color: string, status: ItemStatus | undefined, isRouteSelected: boolean, seqNum?: number) => {
+  let bgColor = color;
+  if (isRouteSelected) {
+    bgColor = '#8b5cf6';
+  } else if (status === 'found') {
+    bgColor = '#9ca3af';
+  } else if (status === 'not_found') {
+    bgColor = '#ef4444';
+  }
+
   return (
     <div style={{
-      backgroundColor: isRouteSelected ? '#8b5cf6' : (isChecked ? '#9ca3af' : color),
+      backgroundColor: bgColor,
       width: isRouteSelected ? '24px' : '16px',
       height: isRouteSelected ? '24px' : '16px',
       borderRadius: '50%',
@@ -76,8 +84,8 @@ export default function Map({
   bizcodes, 
   homecodes, 
   badges, 
-  checkedItems, 
-  onToggleCheck,
+  itemStatuses, 
+  onSetItemStatus,
   routeMode,
   routePoints,
   routeGeoJSON,
@@ -147,7 +155,7 @@ export default function Map({
 
       {bizcodes.map((biz) => {
         const id = biz.code_id;
-        const isChecked = checkedItems.has(id);
+        const status = itemStatuses[id];
         const seq = getRouteSequenceNumber(id);
         return (
           <Marker 
@@ -158,14 +166,14 @@ export default function Map({
             onClick={(e) => handleMarkerClick(e, biz, 'biz')}
             style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
           >
-            {createDot('#3b82f6', isChecked, seq !== undefined, seq)}
+            {createDot('#3b82f6', status, seq !== undefined, seq)}
           </Marker>
         );
       })}
 
       {homecodes.map((home) => {
         const id = home.code_id || `home-${home.lat}-${home.lon}`;
-        const isChecked = checkedItems.has(id);
+        const status = itemStatuses[id];
         const seq = getRouteSequenceNumber(id);
         return (
           <Marker 
@@ -176,14 +184,14 @@ export default function Map({
             onClick={(e) => handleMarkerClick(e, home, 'home')}
             style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
           >
-            {createDot('#10b981', isChecked, seq !== undefined, seq)}
+            {createDot('#10b981', status, seq !== undefined, seq)}
           </Marker>
         );
       })}
 
       {badges.map((badge) => {
         const id = `badge-${badge.lat}-${badge.lon}`;
-        const isChecked = checkedItems.has(id);
+        const status = itemStatuses[id];
         const seq = getRouteSequenceNumber(id);
         return (
           <Marker 
@@ -194,7 +202,7 @@ export default function Map({
             onClick={(e) => handleMarkerClick(e, badge, 'badge')}
             style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
           >
-            {createDot('#f59e0b', isChecked, seq !== undefined, seq)}
+            {createDot('#f59e0b', status, seq !== undefined, seq)}
           </Marker>
         );
       })}
@@ -231,20 +239,39 @@ export default function Map({
                 />
               </div>
               
-              <button 
-                onClick={() => {
-                  const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
-                  onToggleCheck(id);
-                  setPopupInfo(null);
-                }}
-                className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${
-                  checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) 
-                    ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2' 
-                    : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-500 ring-offset-2' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500 ring-offset-2' : 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500 ring-offset-2'))
-                }`}
-              >
-                {checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) ? "✓ Checked Off (Undo)" : "Check Off Location"}
-              </button>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
+                    const currentStatus = itemStatuses[id];
+                    onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
+                    setPopupInfo(null);
+                  }}
+                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${
+                    itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found'
+                      ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2' 
+                      : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-500 ring-offset-2' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500 ring-offset-2' : 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500 ring-offset-2'))
+                  }`}
+                >
+                  {itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found' ? "✓ Found (Undo)" : "Mark as Found"}
+                </button>
+
+                <button 
+                  onClick={() => {
+                    const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
+                    const currentStatus = itemStatuses[id];
+                    onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
+                    setPopupInfo(null);
+                  }}
+                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${
+                    itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found'
+                      ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2' 
+                      : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
+                  }`}
+                >
+                  {itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

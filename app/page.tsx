@@ -14,7 +14,7 @@ const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () 
 
 export default function Home() {
   const { data, loading, error } = useMapData();
-  const { checkedItems, toggleItem } = useProgress();
+  const { itemStatuses, setItemStatus, checkedItems, toggleItem } = useProgress();
 
   const [address, setAddress] = useState("");
   const [center, setCenter] = useState(() => {
@@ -314,9 +314,13 @@ export default function Home() {
           {/* Progress Stats */}
           <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2 mb-2">
               <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
-              <span className="text-blue-600/80 font-semibold text-sm">items checked off</span>
+              <span className="text-blue-600/80 font-semibold text-sm">items found</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
+              <span className="text-red-500/80 font-semibold text-xs">items not found</span>
             </div>
           </section>
 
@@ -354,8 +358,8 @@ export default function Home() {
               bizcodes={filteredData.bizcodes} 
               homecodes={filteredData.homecodes} 
               badges={filteredData.badges}
-              checkedItems={checkedItems}
-              onToggleCheck={toggleItem}
+              itemStatuses={itemStatuses}
+              onSetItemStatus={setItemStatus}
               routeMode={routeMode}
               routePoints={routePoints}
               routeGeoJSON={routeGeoJSON}
@@ -370,10 +374,12 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredData.bizcodes.map(biz => {
                  const id = biz.code_id;
-                 const isChecked = checkedItems.has(id);
+                 const status = itemStatuses[id];
+                 const isChecked = status === 'found';
+                 const isNotFound = status === 'not_found';
                  return (
-                   <div key={id} className={`p-5 rounded-2xl border transition-all ${isChecked ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : 'bg-white border-blue-100 shadow-md hover:shadow-lg'}`}>
-                      <div className="flex gap-4 items-start flex-col h-full">
+                   <div key={id} className={`p-5 rounded-2xl border transition-all flex flex-col ${isChecked ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : (isNotFound ? 'bg-red-50 border-red-200 opacity-90 scale-[0.98]' : 'bg-white border-blue-100 shadow-md hover:shadow-lg')}`}>
+                      <div className="flex gap-4 items-start flex-col flex-1">
                         <div className="flex items-center gap-2 w-full">
                           <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0 ring-2 ring-blue-100"></div>
                           <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Business</span>
@@ -381,8 +387,13 @@ export default function Home() {
                         <div className="flex-1 w-full">
                           <div dangerouslySetInnerHTML={{ __html: biz.bizcode }} className="text-sm mb-4 font-medium text-gray-800 leading-relaxed" />
                         </div>
-                        <button onClick={() => toggleItem(id)} className={`w-full text-sm px-4 py-2.5 rounded-xl font-bold transition-colors ${isChecked ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                          {isChecked ? 'Uncheck Item' : 'Check Off'}
+                      </div>
+                      <div className="w-full flex gap-2 mt-auto pt-4">
+                        <button onClick={() => setItemStatus(id, isChecked ? null : 'found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isChecked ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                          {isChecked ? '✓ Found' : 'Found'}
+                        </button>
+                        <button onClick={() => setItemStatus(id, isNotFound ? null : 'not_found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isNotFound ? 'bg-red-500 text-white hover:bg-red-600 ring-2 ring-red-400 ring-offset-1' : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'}`}>
+                          {isNotFound ? '✕ Missing' : 'Missing'}
                         </button>
                       </div>
                    </div>
