@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: sync_password
       POSTGRES_DB: sync_db
     ports:
-      - "5432:5432"
+      - "5497:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +21,7 @@ services:
     image: adminer
     restart: always
     ports:
-      - "8080:8080"
+      - "8397:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -29,7 +29,7 @@ services:
   sync-server:
     build: .
     ports:
-      - "3001:3001"
+      - "3397:3001"
     environment:
       - DATABASE_URL=postgres://sync_user:sync_password@db:5432/sync_db
       - PORT=3001
