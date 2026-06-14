@@ -147,11 +147,11 @@ export default function Home() {
     setAllVisible(allPoints.slice(0, 25));
   };
 
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center bg-gray-50 text-xl font-medium text-gray-700">Loading Map Data...</div>;
-  if (error) return <div className="h-screen w-screen flex items-center justify-center bg-red-50 text-red-600 font-medium">Error loading data: {error.message}</div>;
+  if (loading) return <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-50 text-xl font-medium text-gray-700">Loading Map Data...</div>;
+  if (error) return <div className="h-[100dvh] w-screen flex items-center justify-center bg-red-50 text-red-600 font-medium">Error loading data: {error.message}</div>;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
+    <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
       
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
         {/* Sidebar */}
@@ -427,7 +427,7 @@ export default function Home() {
       </div>
 
       {/* View Toggle (Mobile) */}
-      <div className="p-3 border-t border-gray-200 bg-white md:hidden shrink-0 z-50 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+      <div className="pt-3 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] border-t border-gray-200 bg-white md:hidden shrink-0 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
           <button 
             onClick={() => setViewMode('filters')} 
