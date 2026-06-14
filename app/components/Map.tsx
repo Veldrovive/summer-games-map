@@ -8,6 +8,7 @@ import { ItemStatus } from "../hooks/useProgress";
 
 type MapProps = {
   center: { lat: number; lon: number };
+  liveLocation?: { lat: number; lon: number } | null;
   bizcodes: BizCode[];
   homecodes: HomeCode[];
   badges: Badge[];
@@ -81,6 +82,7 @@ const createDot = (color: string, status: ItemStatus | undefined, isRouteSelecte
 
 export default function Map({ 
   center, 
+  liveLocation,
   bizcodes, 
   homecodes, 
   badges, 
@@ -142,15 +144,25 @@ export default function Map({
         </Source>
       )}
 
-      {/* User Location Marker */}
-      <Marker longitude={center.lon} latitude={center.lat} anchor="center">
+      {/* Live Location Marker */}
+      {liveLocation && (
+        <Marker longitude={liveLocation.lon} latitude={liveLocation.lat} anchor="center" style={{ zIndex: 50 }}>
+          <div className="relative flex justify-center items-center">
+            <div className="absolute w-8 h-8 bg-blue-500 rounded-full animate-ping opacity-75 pointer-events-none"></div>
+            <div className="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-md cursor-pointer" title="Live Location"></div>
+          </div>
+        </Marker>
+      )}
+
+      {/* User Location (Search/Midpoint) Marker */}
+      <Marker longitude={center.lon} latitude={center.lat} anchor="center" style={{ zIndex: 40 }}>
         <div style={{
           backgroundColor: '#ef4444',
           width: '16px', height: '16px',
           borderRadius: '50%',
           border: '2px solid white',
           boxShadow: '0 0 4px rgba(0,0,0,0.4)'
-        }} title="Your Location" />
+        }} title="Search Center / Midpoint" />
       </Marker>
 
       {bizcodes.map((biz) => {

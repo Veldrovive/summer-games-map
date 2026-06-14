@@ -28,6 +28,25 @@ export default function Home() {
   });
   const [radius, setRadius] = useState<number>(5); // Default 5 miles
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [liveLocation, setLiveLocation] = useState<{lat: number, lon: number} | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && "geolocation" in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          setLiveLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error("Live location error:", error);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -307,6 +326,23 @@ export default function Home() {
                     Clear
                   </button>
                 </div>
+                
+                {routePoints.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const origin = liveLocation ? `${liveLocation.lat},${liveLocation.lon}` : `${routePoints[0].lat},${routePoints[0].lon}`;
+                      const destIdx = routePoints.length - 1;
+                      const dest = `${routePoints[destIdx].lat},${routePoints[destIdx].lon}`;
+                      const waypoints = routePoints.slice(liveLocation ? 0 : 1, destIdx).map(p => `${p.lat},${p.lon}`).join('|');
+                      let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
+                      if (waypoints) url += `&waypoints=${waypoints}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="w-full flex items-center justify-center gap-2 mt-2 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-emerald-700 shadow-sm transition-colors"
+                  >
+                    <Navigation className="w-4 h-4" /> Open Route in Google Maps
+                  </button>
+                )}
               </div>
             )}
           </section>
@@ -355,6 +391,7 @@ export default function Home() {
             </div>
             <Map 
               center={center} 
+              liveLocation={liveLocation}
               bizcodes={filteredData.bizcodes} 
               homecodes={filteredData.homecodes} 
               badges={filteredData.badges}
