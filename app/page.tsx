@@ -26,7 +26,7 @@ export default function Home() {
     }
     return { lat: 42.2808, lon: -83.7430 };
   });
-  const [radius, setRadius] = useState<number>(5); // Default 5 miles
+  const [radius, setRadius] = useState<number>(100000); // Default 100000 miles
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [liveLocation, setLiveLocation] = useState<{lat: number, lon: number} | null>(null);
 
@@ -164,60 +164,26 @@ export default function Home() {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
           
-          {/* Location Settings */}
-          <section className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
-              <MapPin className="w-4 h-4" /> Location
-            </h2>
+          {/* Progress Stats */}
+          <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col gap-4">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
+                <span className="text-blue-600/80 font-semibold text-sm">items found</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
+                <span className="text-red-500/80 font-semibold text-xs">items not found</span>
+              </div>
+            </div>
             
-            <form onSubmit={handleSearch} className="flex gap-2 mb-3">
-              <input 
-                type="text" 
-                placeholder="Enter address or zip..." 
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-medium"
-              />
-              <button 
-                type="submit" 
-                disabled={isGeocoding}
-                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </form>
-
-            <button 
-              onClick={handleUseLocation}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
+            <button
+              onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
+              className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
             >
-              <Navigation className="w-4 h-4 text-blue-600" /> Use My Location
+              {viewMode === 'found' ? 'Return to Map' : 'View Found Codes'}
             </button>
-          </section>
-
-          {/* Distance Filter */}
-          <section className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4" /> Max Distance
-              </h2>
-              <span className="font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full text-sm border border-blue-100">{radius} miles</span>
-            </div>
-            
-            <input 
-              type="range" 
-              min="0.5" 
-              max="50" 
-              step="0.5"
-              value={radius}
-              onChange={e => setRadius(parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-3 font-semibold">
-              <span>0.5m</span>
-              <span>25m</span>
-              <span>50m</span>
-            </div>
           </section>
 
           {/* Filters */}
@@ -347,28 +313,6 @@ export default function Home() {
                 )}
               </div>
             )}
-          </section>
-
-          {/* Progress Stats */}
-          <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
-                <span className="text-blue-600/80 font-semibold text-sm">items found</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
-                <span className="text-red-500/80 font-semibold text-xs">items not found</span>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
-              className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
-            >
-              {viewMode === 'found' ? 'Return to Map' : 'View Found Codes'}
-            </button>
           </section>
 
         </div>

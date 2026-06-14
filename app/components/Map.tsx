@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
-import MapGL, { Marker, Source, Layer } from "react-map-gl/maplibre";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import MapGL, { Marker, Source, Layer, MapRef } from "react-map-gl/maplibre";
+import { Locate, LocateFixed } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { ItemStatus } from "../hooks/useProgress";
@@ -72,6 +73,19 @@ export default function Map({
 }: MapProps) {
   const [popupInfo, setPopupInfo] = useState<any>(null);
   const [cursor, setCursor] = useState<string>('');
+
+  const mapRef = useRef<MapRef>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  useEffect(() => {
+    if (isFollowing && liveLocation && mapRef.current) {
+      mapRef.current.flyTo({ center: [liveLocation.lon, liveLocation.lat], zoom: 15 });
+    }
+  }, [liveLocation, isFollowing]);
+
+  const onDragStart = useCallback(() => {
+    setIsFollowing(false);
+  }, []);
 
   const handleMarkerClick = (e: any, item: any, type: string) => {
     if (e.originalEvent) {
@@ -195,6 +209,7 @@ export default function Map({
   return (
     <div className="relative w-full h-full">
       <MapGL
+        ref={mapRef}
         initialViewState={{
           longitude: center.lon,
           latitude: center.lat,
@@ -208,6 +223,7 @@ export default function Map({
         onClick={onMapClick}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        onDragStart={onDragStart}
       >
         {/* Route Layer */}
         {routeGeoJSON && routeMode && (
@@ -234,16 +250,7 @@ export default function Map({
           </Marker>
         )}
 
-        {/* User Location (Search/Midpoint) Marker */}
-        <Marker longitude={center.lon} latitude={center.lat} anchor="center" style={{ zIndex: 40 }}>
-          <div style={{
-            backgroundColor: '#ef4444',
-            width: '16px', height: '16px',
-            borderRadius: '50%',
-            border: '2px solid white',
-            boxShadow: '0 0 4px rgba(0,0,0,0.4)'
-          }} title="Search Center / Midpoint" />
-        </Marker>
+
 
         {/* WebGL Markers Layer */}
         <Source id="markers" type="geojson" data={geojsonFeatures}>
@@ -272,6 +279,23 @@ export default function Map({
         </Source>
 
       </MapGL>
+
+      {/* Follow User Location Button */}
+      {liveLocation && (
+        <div className="absolute bottom-8 right-8 z-[1000]">
+          <button
+            onClick={() => setIsFollowing(true)}
+            className={`p-3 rounded-full shadow-lg border transition-colors ${
+              isFollowing 
+                ? 'bg-blue-600 text-white border-blue-700' 
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+            }`}
+            title="Follow My Location"
+          >
+            {isFollowing ? <LocateFixed className="w-6 h-6" /> : <Locate className="w-6 h-6" />}
+          </button>
+        </div>
+      )}
 
       {/* Modal Overlay */}
       {popupInfo && !routeMode && (
