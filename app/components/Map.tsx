@@ -17,7 +17,7 @@ type MapProps = {
   badges: Badge[];
   itemStatuses: Record<string, ItemStatus>;
   onSetItemStatus: (id: string, status: ItemStatus | null) => void;
-  
+
   // Routing props
   routeMode: boolean;
   routePoints: RoutePoint[];
@@ -53,13 +53,13 @@ const osmStyle = {
 };
 
 
-export default function Map({ 
-  center, 
+export default function Map({
+  center,
   liveLocation,
-  bizcodes, 
-  homecodes, 
-  badges, 
-  itemStatuses, 
+  bizcodes,
+  homecodes,
+  badges,
+  itemStatuses,
   onSetItemStatus,
   routeMode,
   routePoints,
@@ -73,7 +73,7 @@ export default function Map({
     if (e.originalEvent) {
       e.originalEvent.stopPropagation();
     }
-    
+
     if (routeMode) {
       const point: RoutePoint = {
         id: item.code_id || `${type}-${item.lat}-${item.lon}`,
@@ -95,12 +95,12 @@ export default function Map({
 
   const geojsonFeatures = useMemo(() => {
     const features: any[] = [];
-    
+
     bizcodes.forEach((biz) => {
       const id = biz.code_id;
       const status = itemStatuses[id];
       const seq = getRouteSequenceNumber(id);
-      
+
       let bgColor = '#3b82f6';
       if (seq !== undefined) {
         bgColor = '#8b5cf6';
@@ -127,7 +127,7 @@ export default function Map({
       const id = home.code_id || `home-${home.lat}-${home.lon}`;
       const status = itemStatuses[id];
       const seq = getRouteSequenceNumber(id);
-      
+
       let bgColor = '#10b981';
       if (seq !== undefined) bgColor = '#8b5cf6';
       else if (status === 'found') bgColor = '#9ca3af';
@@ -150,7 +150,7 @@ export default function Map({
       const id = `badge-${badge.lat}-${badge.lon}`;
       const status = itemStatuses[id];
       const seq = getRouteSequenceNumber(id);
-      
+
       let bgColor = '#f59e0b';
       if (seq !== undefined) bgColor = '#8b5cf6';
       else if (status === 'found') bgColor = '#9ca3af';
@@ -179,7 +179,7 @@ export default function Map({
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
       const { itemType, color, isRouteSelected, seqNum, ...itemProps } = feature.properties;
-      
+
       // Call existing handleMarkerClick logic
       handleMarkerClick(e, itemProps, itemType);
     }
@@ -205,67 +205,67 @@ export default function Map({
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
-      {/* Route Layer */}
-      {routeGeoJSON && routeMode && (
-        <Source type="geojson" data={routeGeoJSON}>
+        {/* Route Layer */}
+        {routeGeoJSON && routeMode && (
+          <Source type="geojson" data={routeGeoJSON}>
+            <Layer
+              id="route"
+              type="line"
+              paint={{
+                'line-color': '#3b82f6',
+                'line-width': 5,
+                'line-opacity': 0.7
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Live Location Marker */}
+        {liveLocation && (
+          <Marker longitude={liveLocation.lon} latitude={liveLocation.lat} anchor="center" style={{ zIndex: 50 }}>
+            <div className="relative flex justify-center items-center">
+              <div className="absolute w-8 h-8 bg-blue-500 rounded-full animate-ping opacity-75 pointer-events-none"></div>
+              <div className="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-md cursor-pointer" title="Live Location"></div>
+            </div>
+          </Marker>
+        )}
+
+        {/* User Location (Search/Midpoint) Marker */}
+        <Marker longitude={center.lon} latitude={center.lat} anchor="center" style={{ zIndex: 40 }}>
+          <div style={{
+            backgroundColor: '#ef4444',
+            width: '16px', height: '16px',
+            borderRadius: '50%',
+            border: '2px solid white',
+            boxShadow: '0 0 4px rgba(0,0,0,0.4)'
+          }} title="Search Center / Midpoint" />
+        </Marker>
+
+        {/* WebGL Markers Layer */}
+        <Source id="markers" type="geojson" data={geojsonFeatures}>
           <Layer
-            id="route"
-            type="line"
+            id="markers-circles"
+            type="circle"
             paint={{
-              'line-color': '#3b82f6',
-              'line-width': 5,
-              'line-opacity': 0.7
+              'circle-color': ['get', 'color'],
+              'circle-radius': ['case', ['get', 'isRouteSelected'], 12, 8],
+              'circle-stroke-width': ['case', ['get', 'isRouteSelected'], 3, 2],
+              'circle-stroke-color': '#ffffff'
+            }}
+          />
+          <Layer
+            id="markers-text"
+            type="symbol"
+            layout={{
+              'text-field': ['to-string', ['get', 'seqNum']],
+              'text-size': 12,
+              'text-allow-overlap': true
+            }}
+            paint={{
+              'text-color': '#ffffff'
             }}
           />
         </Source>
-      )}
-
-      {/* Live Location Marker */}
-      {liveLocation && (
-        <Marker longitude={liveLocation.lon} latitude={liveLocation.lat} anchor="center" style={{ zIndex: 50 }}>
-          <div className="relative flex justify-center items-center">
-            <div className="absolute w-8 h-8 bg-blue-500 rounded-full animate-ping opacity-75 pointer-events-none"></div>
-            <div className="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-md cursor-pointer" title="Live Location"></div>
-          </div>
-        </Marker>
-      )}
-
-      {/* User Location (Search/Midpoint) Marker */}
-      <Marker longitude={center.lon} latitude={center.lat} anchor="center" style={{ zIndex: 40 }}>
-        <div style={{
-          backgroundColor: '#ef4444',
-          width: '16px', height: '16px',
-          borderRadius: '50%',
-          border: '2px solid white',
-          boxShadow: '0 0 4px rgba(0,0,0,0.4)'
-        }} title="Search Center / Midpoint" />
-      </Marker>
-
-      {/* WebGL Markers Layer */}
-      <Source id="markers" type="geojson" data={geojsonFeatures}>
-        <Layer
-          id="markers-circles"
-          type="circle"
-          paint={{
-            'circle-color': ['get', 'color'],
-            'circle-radius': ['case', ['get', 'isRouteSelected'], 12, 8],
-            'circle-stroke-width': ['case', ['get', 'isRouteSelected'], 3, 2],
-            'circle-stroke-color': '#ffffff'
-          }}
-        />
-        <Layer
-          id="markers-text"
-          type="symbol"
-          layout={{
-            'text-field': ['to-string', ['get', 'seqNum']],
-            'text-size': 12,
-            'text-allow-overlap': true
-          }}
-          paint={{
-            'text-color': '#ffffff'
-          }}
-        />
-      </Source>
 
       </MapGL>
 
@@ -277,7 +277,7 @@ export default function Map({
               <h3 className="font-bold text-lg text-gray-800">
                 {popupInfo.type === 'biz' ? 'Business Code' : (popupInfo.type === 'home' ? 'Home Code' : 'Badge')}
               </h3>
-              <button 
+              <button
                 onClick={() => setPopupInfo(null)}
                 className="text-gray-500 hover:text-gray-800 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
                 aria-label="Close modal"
@@ -289,45 +289,52 @@ export default function Map({
               {popupInfo.type === 'badge' && popupInfo.image && (
                 <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-md" />
               )}
-              
+
               <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
-                <div 
-                  dangerouslySetInnerHTML={{ 
-                    __html: popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup) 
-                  }} 
-                  className={`text-gray-800 text-lg ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''} prose prose-sm max-w-none`} 
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup)
+                  }}
+                  className={`text-gray-800 text-lg ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''} prose prose-sm max-w-none`}
                 />
               </div>
-              
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: "Number of redemptions: " + popupInfo.num_redemptions
+                  }}
+                  className={`text-gray-800 text-lg ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''} prose prose-sm max-w-none`}
+                />
+              </div>
+
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={() => {
                     const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
                     const currentStatus = itemStatuses[id];
                     onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
                     setPopupInfo(null);
                   }}
-                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${
-                    itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found'
-                      ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2' 
-                      : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-500 ring-offset-2' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500 ring-offset-2' : 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500 ring-offset-2'))
-                  }`}
+                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found'
+                    ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
+                    : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-500 ring-offset-2' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500 ring-offset-2' : 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500 ring-offset-2'))
+                    }`}
                 >
                   {itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'found' ? "✓ Found (Undo)" : "Mark as Found"}
                 </button>
 
-                <button 
+                <button
                   onClick={() => {
                     const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
                     const currentStatus = itemStatuses[id];
                     onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
                     setPopupInfo(null);
                   }}
-                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${
-                    itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found'
-                      ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2' 
-                      : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
-                  }`}
+                  className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found'
+                    ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2'
+                    : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
+                    }`}
                 >
                   {itemStatuses[popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)] === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
                 </button>
