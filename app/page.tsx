@@ -59,7 +59,7 @@ export default function Home() {
   const [showHome, setShowHome] = useState(true);
   const [showBadges, setShowBadges] = useState(true);
   const [hideChecked, setHideChecked] = useState(false);
-  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [viewMode, setViewMode] = useState<"map" | "list" | "filters">("map");
 
   // Routing
   const [routeMode, setRouteMode] = useState(false);
@@ -151,10 +151,11 @@ export default function Home() {
   if (error) return <div className="h-screen w-screen flex items-center justify-center bg-red-50 text-red-600 font-medium">Error loading data: {error.message}</div>;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
       
-      {/* Sidebar */}
-      <aside className="w-full md:w-[420px] bg-white border-r border-gray-200 flex flex-col shadow-2xl z-10">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
+        {/* Sidebar */}
+        <aside className={`w-full md:w-[420px] bg-white border-r border-gray-200 flex-col shadow-2xl z-10 h-full ${viewMode === 'filters' ? 'flex' : 'hidden md:flex'}`}>
         <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-md">
           <h1 className="text-2xl font-extrabold tracking-tight">AADL Summer Game</h1>
           <p className="text-blue-100 text-sm mt-1 font-medium opacity-90">Map Explorer & Tracker</p>
@@ -361,29 +362,11 @@ export default function Home() {
           </section>
 
         </div>
-
-        {/* View Toggle (Mobile) */}
-        <div className="p-4 border-t border-gray-200 bg-white md:hidden">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button 
-              onClick={() => setViewMode('map')} 
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'map' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
-            >
-              <MapPin className="w-4 h-4" /> Map View
-            </button>
-            <button 
-              onClick={() => setViewMode('list')} 
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
-            >
-              <List className="w-4 h-4" /> List View
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-1 relative ${viewMode === 'list' ? 'block md:block' : 'hidden md:block'} ${viewMode === 'map' ? 'block md:block' : 'hidden md:hidden'}`}>
-        {viewMode === 'map' ? (
+      <main className={`flex-1 relative h-full ${viewMode === 'map' || viewMode === 'list' ? 'block' : 'hidden md:block'}`}>
+        {viewMode !== 'list' ? (
           <>
             <div className="absolute top-6 left-6 z-[1000] bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-gray-200 font-bold text-gray-800 text-sm flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
@@ -441,7 +424,31 @@ export default function Home() {
           </div>
         )}
       </main>
+      </div>
 
+      {/* View Toggle (Mobile) */}
+      <div className="p-3 border-t border-gray-200 bg-white md:hidden shrink-0 z-50 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
+          <button 
+            onClick={() => setViewMode('filters')} 
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'filters' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
+          >
+            <SlidersHorizontal className="w-4 h-4" /> Menu
+          </button>
+          <button 
+            onClick={() => setViewMode('map')} 
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'map' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
+          >
+            <MapPin className="w-4 h-4" /> Map
+          </button>
+          <button 
+            onClick={() => setViewMode('list')} 
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
+          >
+            <List className="w-4 h-4" /> List
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
