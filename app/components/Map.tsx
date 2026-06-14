@@ -17,6 +17,8 @@ type MapProps = {
   badges: Badge[];
   itemStatuses: Record<string, ItemStatus>;
   onSetItemStatus: (id: string, status: ItemStatus | null) => void;
+  itemMetadata: Record<string, { notes?: string; code?: string }>;
+  onSetItemMetadata: (id: string, metadata: { notes?: string; code?: string }) => void;
 
   // Routing props
   routeMode: boolean;
@@ -61,6 +63,8 @@ export default function Map({
   badges,
   itemStatuses,
   onSetItemStatus,
+  itemMetadata,
+  onSetItemMetadata,
   routeMode,
   routePoints,
   routeGeoJSON,
@@ -313,47 +317,71 @@ export default function Map({
                 const currentStatus = itemStatuses[id];
                 const isFoundOrEntered = currentStatus === 'found' || currentStatus === 'entered';
                 return (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex gap-2 w-full">
-                      <button
-                        onClick={() => {
-                          onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
-                          setPopupInfo(null);
-                        }}
-                        className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'found'
-                          ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
-                          : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'))
-                          }`}
-                      >
-                        {currentStatus === 'found' ? "✓ Found" : "Found"}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          onSetItemStatus(id, currentStatus === 'entered' ? null : 'entered');
-                          setPopupInfo(null);
-                        }}
-                        className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'entered'
-                          ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
-                          : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-800 hover:bg-amber-900'))
-                          }`}
-                      >
-                        {currentStatus === 'entered' ? "✓ Entered" : "Found & Entered"}
-                      </button>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-bold text-gray-700">Code (optional):</span>
+                        <input
+                          type="text"
+                          placeholder="Enter the code..."
+                          value={itemMetadata[id]?.code || ''}
+                          onChange={(e) => onSetItemMetadata(id, { code: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-bold text-gray-700">Notes (optional):</span>
+                        <textarea
+                          placeholder="Add generic notes here..."
+                          value={itemMetadata[id]?.notes || ''}
+                          onChange={(e) => onSetItemMetadata(id, { notes: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 min-h-[60px]"
+                        />
+                      </label>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
-                        setPopupInfo(null);
-                      }}
-                      className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${currentStatus === 'not_found'
-                        ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2'
-                        : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
-                        }`}
-                    >
-                      {currentStatus === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
-                    </button>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex gap-2 w-full">
+                        <button
+                          onClick={() => {
+                            onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
+                            setPopupInfo(null);
+                          }}
+                          className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'found'
+                            ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
+                            : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'))
+                            }`}
+                        >
+                          {currentStatus === 'found' ? "✓ Found" : "Found"}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            onSetItemStatus(id, currentStatus === 'entered' ? null : 'entered');
+                            setPopupInfo(null);
+                          }}
+                          className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'entered'
+                            ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
+                            : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-800 hover:bg-amber-900'))
+                            }`}
+                        >
+                          {currentStatus === 'entered' ? "✓ Entered" : "Found & Entered"}
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
+                          setPopupInfo(null);
+                        }}
+                        className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${currentStatus === 'not_found'
+                          ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2'
+                          : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
+                          }`}
+                      >
+                        {currentStatus === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
+                      </button>
+                    </div>
                   </div>
                 );
               })()}

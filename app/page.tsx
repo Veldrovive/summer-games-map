@@ -14,7 +14,7 @@ const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () 
 
 export default function Home() {
   const { data, loading, error } = useMapData();
-  const { itemStatuses, setItemStatus, checkedItems, toggleItem } = useProgress();
+  const { itemStatuses, setItemStatus, checkedItems, toggleItem, itemMetadata, setItemMetadata } = useProgress();
 
   const [address, setAddress] = useState("");
   const [center, setCenter] = useState(() => {
@@ -60,6 +60,7 @@ export default function Home() {
   const [showBadges, setShowBadges] = useState(true);
   const [hideChecked, setHideChecked] = useState(false);
   const [viewMode, setViewMode] = useState<"map" | "list" | "filters" | "found">("map");
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
   // Routing
   const [routeMode, setRouteMode] = useState(false);
@@ -389,6 +390,8 @@ export default function Home() {
               badges={filteredData.badges}
               itemStatuses={itemStatuses}
               onSetItemStatus={setItemStatus}
+              itemMetadata={itemMetadata}
+              onSetItemMetadata={setItemMetadata}
               routeMode={routeMode}
               routePoints={routePoints}
               routeGeoJSON={routeGeoJSON}
@@ -468,22 +471,53 @@ export default function Home() {
                 }
 
                 return items.map(item => (
-                  <div key={item.id} className={`p-5 rounded-2xl border transition-all flex items-center gap-4 ${item.status === 'entered' ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
+                  <div key={item.id} className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col gap-3 ${item.status === 'entered' ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
+                        </div>
+                        <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.status === 'entered' ? 'line-through' : ''}`} />
                       </div>
-                      <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.status === 'entered' ? 'line-through' : ''}`} />
+                      
+                      <div className="w-full md:w-auto md:min-w-[150px]">
+                        <input
+                          type="text"
+                          placeholder="Code..."
+                          value={itemMetadata[item.id]?.code || ''}
+                          onChange={(e) => setItemMetadata(item.id, { code: e.target.value })}
+                          className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setExpandedItems(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                          className="flex-1 md:flex-none text-center text-xs font-bold text-blue-600 bg-blue-50 px-2 sm:px-3 py-2.5 md:py-2 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
+                        >
+                          {expandedItems[item.id] ? 'Hide Notes' : 'Notes'}
+                        </button>
+                        <label className="flex items-center justify-center gap-2 cursor-pointer flex-1 md:flex-none bg-white px-2 sm:px-4 py-2.5 md:py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                          <input 
+                            type="checkbox" 
+                            checked={item.status === 'entered'}
+                            onChange={(e) => setItemStatus(item.id, e.target.checked ? 'entered' : 'found')}
+                            className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm font-bold text-gray-700">Entered</span>
+                        </label>
+                      </div>
                     </div>
-                    <label className="flex items-center gap-2 cursor-pointer flex-shrink-0 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                      <input 
-                        type="checkbox" 
-                        checked={item.status === 'entered'}
-                        onChange={(e) => setItemStatus(item.id, e.target.checked ? 'entered' : 'found')}
-                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm font-bold text-gray-700">Entered</span>
-                    </label>
+                    {expandedItems[item.id] && (
+                      <div className="flex flex-col w-full pt-3 border-t border-gray-100">
+                        <textarea
+                          placeholder="Notes (optional)..."
+                          value={itemMetadata[item.id]?.notes || ''}
+                          onChange={(e) => setItemMetadata(item.id, { notes: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 min-h-[60px] bg-gray-50"
+                        />
+                      </div>
+                    )}
                   </div>
                 ));
               })()}

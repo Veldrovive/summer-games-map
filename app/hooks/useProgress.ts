@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 
 export type ItemStatus = 'found' | 'not_found' | 'entered';
 
+export type ItemMetadata = { notes?: string; code?: string };
+
 export function useProgress() {
   const [itemStatuses, setItemStatuses] = useState<Record<string, ItemStatus>>({});
+  const [itemMetadata, setItemMetadataState] = useState<Record<string, ItemMetadata>>({});
 
   useEffect(() => {
     try {
@@ -25,6 +28,14 @@ export function useProgress() {
       }
     } catch (e) {
       console.error("Failed to load progress", e);
+    }
+    try {
+      const meta = localStorage.getItem('aadl_metadata');
+      if (meta) {
+        setItemMetadataState(JSON.parse(meta));
+      }
+    } catch (e) {
+      console.error("Failed to load metadata", e);
     }
   }, []);
 
@@ -62,7 +73,20 @@ export function useProgress() {
     });
   }, []);
 
+  const setItemMetadata = useCallback((id: string, metadata: Partial<ItemMetadata>) => {
+    setItemMetadataState(prev => {
+      const next = { ...prev };
+      next[id] = { ...(next[id] || {}), ...metadata };
+      try {
+        localStorage.setItem('aadl_metadata', JSON.stringify(next));
+      } catch (e) {
+         console.error("Failed to save metadata", e);
+      }
+      return next;
+    });
+  }, []);
+
   const checkedItems = new Set(Object.keys(itemStatuses).filter(k => itemStatuses[k] === 'found' || itemStatuses[k] === 'entered'));
 
-  return { itemStatuses, setItemStatus, toggleItem, checkedItems };
+  return { itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata };
 }
