@@ -22,13 +22,13 @@ export class RoutingEngine {
       
       this.pathFinder = new PathFinder(data, {
         precision: 1e-5
-      });
+      } as any);
       
       // Extract all vertices for snapping
       const vertices: any[] = [];
       turf.geomEach(data, (geom) => {
         if (geom.type === 'LineString') {
-           geom.coordinates.forEach(coord => {
+           geom.coordinates.forEach((coord: any) => {
               vertices.push(turf.point(coord));
            });
         }
