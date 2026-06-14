@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import MapGL, { Marker, Source, Layer } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -52,36 +52,6 @@ const osmStyle = {
   ]
 };
 
-const createDot = (color: string, status: ItemStatus | undefined, isRouteSelected: boolean, seqNum?: number) => {
-  let bgColor = color;
-  if (isRouteSelected) {
-    bgColor = '#8b5cf6';
-  } else if (status === 'found') {
-    bgColor = '#9ca3af';
-  } else if (status === 'not_found') {
-    bgColor = '#ef4444';
-  }
-
-  return (
-    <div style={{
-      backgroundColor: bgColor,
-      width: isRouteSelected ? '24px' : '16px',
-      height: isRouteSelected ? '24px' : '16px',
-      borderRadius: '50%',
-      border: isRouteSelected ? '3px solid white' : '2px solid white',
-      boxShadow: '0 0 4px rgba(0,0,0,0.4)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      transition: 'all 0.2s'
-    }}>
-      {seqNum !== undefined ? seqNum : ''}
-    </div>
-  );
-};
 
 export default function Map({ 
   center, 
@@ -97,9 +67,12 @@ export default function Map({
   onAddRoutePoint
 }: MapProps) {
   const [popupInfo, setPopupInfo] = useState<any>(null);
+  const [cursor, setCursor] = useState<string>('');
 
   const handleMarkerClick = (e: any, item: any, type: string) => {
-    e.originalEvent.stopPropagation();
+    if (e.originalEvent) {
+      e.originalEvent.stopPropagation();
+    }
     
     if (routeMode) {
       const point: RoutePoint = {
@@ -114,24 +87,124 @@ export default function Map({
     }
   };
 
-  const getRouteSequenceNumber = (id: string) => {
+  const getRouteSequenceNumber = useCallback((id: string) => {
     if (!routeMode) return undefined;
     const idx = routePoints.findIndex(p => p.id === id);
     return idx !== -1 ? idx + 1 : undefined;
-  };
+  }, [routeMode, routePoints]);
+
+  const geojsonFeatures = useMemo(() => {
+    const features: any[] = [];
+    
+    bizcodes.forEach((biz) => {
+      const id = biz.code_id;
+      const status = itemStatuses[id];
+      const seq = getRouteSequenceNumber(id);
+      
+      let bgColor = '#3b82f6';
+      if (seq !== undefined) {
+        bgColor = '#8b5cf6';
+      } else if (status === 'found') {
+        bgColor = '#9ca3af';
+      } else if (status === 'not_found') {
+        bgColor = '#ef4444';
+      }
+
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [parseFloat(biz.lon), parseFloat(biz.lat)] },
+        properties: {
+          ...biz,
+          itemType: 'biz',
+          color: bgColor,
+          isRouteSelected: seq !== undefined,
+          seqNum: seq !== undefined ? seq : ''
+        }
+      });
+    });
+
+    homecodes.forEach((home) => {
+      const id = home.code_id || `home-${home.lat}-${home.lon}`;
+      const status = itemStatuses[id];
+      const seq = getRouteSequenceNumber(id);
+      
+      let bgColor = '#10b981';
+      if (seq !== undefined) bgColor = '#8b5cf6';
+      else if (status === 'found') bgColor = '#9ca3af';
+      else if (status === 'not_found') bgColor = '#ef4444';
+
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [parseFloat(home.lon), parseFloat(home.lat)] },
+        properties: {
+          ...home,
+          itemType: 'home',
+          color: bgColor,
+          isRouteSelected: seq !== undefined,
+          seqNum: seq !== undefined ? seq : ''
+        }
+      });
+    });
+
+    badges.forEach((badge) => {
+      const id = `badge-${badge.lat}-${badge.lon}`;
+      const status = itemStatuses[id];
+      const seq = getRouteSequenceNumber(id);
+      
+      let bgColor = '#f59e0b';
+      if (seq !== undefined) bgColor = '#8b5cf6';
+      else if (status === 'found') bgColor = '#9ca3af';
+      else if (status === 'not_found') bgColor = '#ef4444';
+
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [parseFloat(badge.lon), parseFloat(badge.lat)] },
+        properties: {
+          ...badge,
+          itemType: 'badge',
+          color: bgColor,
+          isRouteSelected: seq !== undefined,
+          seqNum: seq !== undefined ? seq : ''
+        }
+      });
+    });
+
+    return {
+      type: 'FeatureCollection' as const,
+      features
+    };
+  }, [bizcodes, homecodes, badges, itemStatuses, getRouteSequenceNumber]);
+
+  const onMapClick = useCallback((e: any) => {
+    if (e.features && e.features.length > 0) {
+      const feature = e.features[0];
+      const { itemType, color, isRouteSelected, seqNum, ...itemProps } = feature.properties;
+      
+      // Call existing handleMarkerClick logic
+      handleMarkerClick(e, itemProps, itemType);
+    }
+  }, [routeMode, onAddRoutePoint]); // Ensure closure bindings are fresh or map correctly
+
+  const onMouseEnter = useCallback(() => setCursor('pointer'), []);
+  const onMouseLeave = useCallback(() => setCursor(''), []);
 
   return (
     <div className="relative w-full h-full">
       <MapGL
         initialViewState={{
-        longitude: center.lon,
-        latitude: center.lat,
-        zoom: 13
-      }}
-      style={{ width: '100%', height: '100%' }}
-      mapStyle={osmStyle}
-      mapLib={maplibregl}
-    >
+          longitude: center.lon,
+          latitude: center.lat,
+          zoom: 13
+        }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle={osmStyle}
+        mapLib={maplibregl}
+        cursor={cursor}
+        interactiveLayerIds={['markers-circles']}
+        onClick={onMapClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
       {/* Route Layer */}
       {routeGeoJSON && routeMode && (
         <Source type="geojson" data={routeGeoJSON}>
@@ -168,59 +241,31 @@ export default function Map({
         }} title="Search Center / Midpoint" />
       </Marker>
 
-      {bizcodes.map((biz) => {
-        const id = biz.code_id;
-        const status = itemStatuses[id];
-        const seq = getRouteSequenceNumber(id);
-        return (
-          <Marker 
-            key={`biz-${id}`} 
-            longitude={parseFloat(biz.lon)} 
-            latitude={parseFloat(biz.lat)} 
-            anchor="center"
-            onClick={(e) => handleMarkerClick(e, biz, 'biz')}
-            style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
-          >
-            {createDot('#3b82f6', status, seq !== undefined, seq)}
-          </Marker>
-        );
-      })}
-
-      {homecodes.map((home) => {
-        const id = home.code_id || `home-${home.lat}-${home.lon}`;
-        const status = itemStatuses[id];
-        const seq = getRouteSequenceNumber(id);
-        return (
-          <Marker 
-            key={id} 
-            longitude={parseFloat(home.lon)} 
-            latitude={parseFloat(home.lat)} 
-            anchor="center"
-            onClick={(e) => handleMarkerClick(e, home, 'home')}
-            style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
-          >
-            {createDot('#10b981', status, seq !== undefined, seq)}
-          </Marker>
-        );
-      })}
-
-      {badges.map((badge) => {
-        const id = `badge-${badge.lat}-${badge.lon}`;
-        const status = itemStatuses[id];
-        const seq = getRouteSequenceNumber(id);
-        return (
-          <Marker 
-            key={id} 
-            longitude={parseFloat(badge.lon)} 
-            latitude={parseFloat(badge.lat)} 
-            anchor="center"
-            onClick={(e) => handleMarkerClick(e, badge, 'badge')}
-            style={{ cursor: 'pointer', zIndex: seq ? 10 : 1 }}
-          >
-            {createDot('#f59e0b', status, seq !== undefined, seq)}
-          </Marker>
-        );
-      })}
+      {/* WebGL Markers Layer */}
+      <Source id="markers" type="geojson" data={geojsonFeatures}>
+        <Layer
+          id="markers-circles"
+          type="circle"
+          paint={{
+            'circle-color': ['get', 'color'],
+            'circle-radius': ['case', ['get', 'isRouteSelected'], 12, 8],
+            'circle-stroke-width': ['case', ['get', 'isRouteSelected'], 3, 2],
+            'circle-stroke-color': '#ffffff'
+          }}
+        />
+        <Layer
+          id="markers-text"
+          type="symbol"
+          layout={{
+            'text-field': ['to-string', ['get', 'seqNum']],
+            'text-size': 12,
+            'text-allow-overlap': true
+          }}
+          paint={{
+            'text-color': '#ffffff'
+          }}
+        />
+      </Source>
 
       </MapGL>
 
