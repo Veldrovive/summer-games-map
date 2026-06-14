@@ -17,9 +17,23 @@ export default function Home() {
   const { checkedItems, toggleItem } = useProgress();
 
   const [address, setAddress] = useState("");
-  const [center, setCenter] = useState({ lat: 42.2808, lon: -83.7430 }); // Ann Arbor default
+  const [center, setCenter] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('savedCenter');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return { lat: 42.2808, lon: -83.7430 };
+  });
   const [radius, setRadius] = useState<number>(5); // Default 5 miles
   const [isGeocoding, setIsGeocoding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('savedCenter', JSON.stringify(center));
+    }
+  }, [center]);
 
   // Filters
   const [showBiz, setShowBiz] = useState(true);
@@ -90,11 +104,17 @@ export default function Home() {
   const totalVisible = filteredData.bizcodes.length + filteredData.homecodes.length + filteredData.badges.length;
 
   const handlePlanAllVisible = () => {
-    // Collect all visible points
+    // Collect all visible points, ignoring already checked off items
     const allPoints = [
-      ...filteredData.bizcodes.map(b => ({ id: b.code_id, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: b.bizcode })),
-      ...filteredData.homecodes.map(h => ({ id: h.code_id || `home-${h.lat}-${h.lon}`, lat: parseFloat(h.lat), lon: parseFloat(h.lon), name: h.homecode || 'Home Code' })),
-      ...filteredData.badges.map(b => ({ id: `badge-${b.lat}-${b.lon}`, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: 'Badge' }))
+      ...filteredData.bizcodes
+        .filter(b => !checkedItems.has(b.code_id))
+        .map(b => ({ id: b.code_id, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: b.bizcode })),
+      ...filteredData.homecodes
+        .filter(h => !checkedItems.has(h.code_id || `home-${h.lat}-${h.lon}`))
+        .map(h => ({ id: h.code_id || `home-${h.lat}-${h.lon}`, lat: parseFloat(h.lat), lon: parseFloat(h.lon), name: h.homecode || 'Home Code' })),
+      ...filteredData.badges
+        .filter(b => !checkedItems.has(`badge-${b.lat}-${b.lon}`))
+        .map(b => ({ id: `badge-${b.lat}-${b.lon}`, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: 'Badge' }))
     ];
     
     // Sort by distance to center

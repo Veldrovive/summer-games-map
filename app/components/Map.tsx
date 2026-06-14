@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import MapGL, { Marker, Popup, Source, Layer } from "react-map-gl/maplibre";
+import MapGL, { Marker, Source, Layer } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { BizCode, HomeCode, Badge } from "../hooks/useMapData";
@@ -102,13 +102,15 @@ export default function Map({
   };
 
   const getRouteSequenceNumber = (id: string) => {
+    if (!routeMode) return undefined;
     const idx = routePoints.findIndex(p => p.id === id);
     return idx !== -1 ? idx + 1 : undefined;
   };
 
   return (
-    <MapGL
-      initialViewState={{
+    <div className="relative w-full h-full">
+      <MapGL
+        initialViewState={{
         longitude: center.lon,
         latitude: center.lat,
         zoom: 13
@@ -118,7 +120,7 @@ export default function Map({
       mapLib={maplibregl}
     >
       {/* Route Layer */}
-      {routeGeoJSON && (
+      {routeGeoJSON && routeMode && (
         <Source type="geojson" data={routeGeoJSON}>
           <Layer
             id="route"
@@ -197,45 +199,56 @@ export default function Map({
         );
       })}
 
-      {/* Popups */}
+      </MapGL>
+
+      {/* Modal Overlay */}
       {popupInfo && !routeMode && (
-        <Popup
-          anchor="bottom"
-          longitude={parseFloat(popupInfo.lon)}
-          latitude={parseFloat(popupInfo.lat)}
-          onClose={() => setPopupInfo(null)}
-          closeButton={true}
-          closeOnClick={false}
-          maxWidth="250px"
-        >
-          <div className="text-sm min-w-[200px] pt-2">
-            {popupInfo.type === 'badge' && popupInfo.image && (
-              <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-20 h-20 object-contain mb-3 mx-auto drop-shadow-md" />
-            )}
-            <div 
-              dangerouslySetInnerHTML={{ 
-                __html: popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup) 
-              }} 
-              className={`mb-3 text-gray-800 ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''}`} 
-            />
-            
-            <button 
-              onClick={() => {
-                const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
-                onToggleCheck(id);
-                setPopupInfo(null);
-              }}
-              className={`px-3 py-2 text-white rounded-md text-sm font-medium w-full transition-colors ${
-                checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) 
-                  ? 'bg-gray-500 hover:bg-gray-600' 
-                  : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'))
-              }`}
-            >
-              {checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) ? "✓ Checked Off (Undo)" : "Check Off"}
-            </button>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
+            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+              <h3 className="font-bold text-lg text-gray-800">
+                {popupInfo.type === 'biz' ? 'Business Code' : (popupInfo.type === 'home' ? 'Home Code' : 'Badge')}
+              </h3>
+              <button 
+                onClick={() => setPopupInfo(null)}
+                className="text-gray-500 hover:text-gray-800 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {popupInfo.type === 'badge' && popupInfo.image && (
+                <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-md" />
+              )}
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup) 
+                  }} 
+                  className={`text-gray-800 text-lg ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''} prose prose-sm max-w-none`} 
+                />
+              </div>
+              
+              <button 
+                onClick={() => {
+                  const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
+                  onToggleCheck(id);
+                  setPopupInfo(null);
+                }}
+                className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${
+                  checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) 
+                    ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2' 
+                    : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-500 ring-offset-2' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500 ring-offset-2' : 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-500 ring-offset-2'))
+                }`}
+              >
+                {checkedItems.has(popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`)) ? "✓ Checked Off (Undo)" : "Check Off Location"}
+              </button>
+            </div>
           </div>
-        </Popup>
+        </div>
       )}
-    </MapGL>
+    </div>
   );
 }

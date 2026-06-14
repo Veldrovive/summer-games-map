@@ -2,7 +2,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { RoutePoint, routingEngine } from '../lib/RoutingEngine';
 
 export function useRouting() {
-  const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
+  const [routePoints, setRoutePoints] = useState<RoutePoint[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('savedRoutePoints');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
   const [routeGeoJSON, setRouteGeoJSON] = useState<any>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [isEngineReady, setIsEngineReady] = useState(false);
@@ -10,8 +18,22 @@ export function useRouting() {
   useEffect(() => {
     routingEngine.init().then(() => {
       setIsEngineReady(true);
+      // If we loaded route points from localStorage, automatically recalculate the path line
+      if (routePoints.length >= 2) {
+        setTimeout(() => {
+          const geojson = routingEngine.calculateSequence(routePoints);
+          setRouteGeoJSON(geojson);
+        }, 50);
+      }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('savedRoutePoints', JSON.stringify(routePoints));
+    }
+  }, [routePoints]);
 
   const addPoint = useCallback((point: RoutePoint) => {
     setRoutePoints(prev => {
