@@ -3,6 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: sync_user
       POSTGRES_PASSWORD: sync_password
@@ -19,7 +20,7 @@ services:
 
   adminer:
     image: adminer
-    restart: always
+    restart: unless-stopped
     ports:
       - "8397:8080"
     depends_on:
@@ -30,6 +31,7 @@ services:
     build: .
     ports:
       - "3397:3001"
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgres://sync_user:sync_password@db:5432/sync_db
       - PORT=3001
