@@ -19,6 +19,7 @@ type ProgressContextType = {
   checkedItems: Set<string>;
   itemMetadata: Record<string, ItemMetadata>;
   setItemMetadata: (id: string, metadata: Partial<ItemMetadata>, remoteTimestamp?: number) => void;
+  restoreBackup: (data: { progress?: Record<string, ProgressItem>, metadata?: Record<string, ItemMetadata> }) => void;
 };
 
 const ProgressContext = createContext<ProgressContextType | null>(null);
@@ -209,6 +210,65 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const restoreBackup = useCallback((data: { progress?: Record<string, ProgressItem>, metadata?: Record<string, ItemMetadata> }) => {
+    if (data.progress) {
+      setProgressState(prev => {
+        const next = { ...prev };
+        let hasChanges = false;
+        const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+
+        for (const [id, item] of Object.entries(data.progress)) {
+          const prevItem = prev[id];
+          if (!prevItem || prevItem.updated_at < item.updated_at) {
+            next[id] = item;
+            hasChanges = true;
+            queue.push({ type: 'status', id, status: item.status, updated_at: item.updated_at });
+          }
+        }
+
+        if (hasChanges) {
+          localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
+          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('aadl_local_update'));
+          }, 0);
+        }
+
+        return next;
+      });
+    }
+
+    if (data.metadata) {
+      setItemMetadataState(prev => {
+        const next = { ...prev };
+        let hasChanges = false;
+        const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+
+        for (const [id, item] of Object.entries(data.metadata)) {
+          const prevItem = prev[id];
+          const itemTimestamp = item.updated_at || Date.now();
+          const prevTimestamp = prevItem?.updated_at || 0;
+          
+          if (itemTimestamp > prevTimestamp) {
+            next[id] = { ...prevItem, ...item, updated_at: itemTimestamp };
+            hasChanges = true;
+            queue.push({ type: 'metadata', id, metadata: item, updated_at: itemTimestamp });
+          }
+        }
+
+        if (hasChanges) {
+          localStorage.setItem('aadl_metadata', JSON.stringify(next));
+          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('aadl_local_update'));
+          }, 0);
+        }
+
+        return next;
+      });
+    }
+  }, []);
+
   // Compute a backwards-compatible itemStatuses for UI components
   const itemStatuses: Record<string, ItemStatus> = {};
   for (const [key, val] of Object.entries(progressState)) {
@@ -218,7 +278,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const checkedItems = new Set(Object.keys(progressState).filter(k => progressState[k]?.status === 'found' || progressState[k]?.status === 'entered'));
 
   return (
-    <ProgressContext.Provider value={{ progressState, itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata }}>
+    <ProgressContext.Provider value={{ progressState, itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata, restoreBackup }}>
       {children}
     </ProgressContext.Provider>
   );

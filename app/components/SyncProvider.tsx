@@ -1,17 +1,52 @@
 "use client";
 
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, ReactNode, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useSync } from "../hooks/useSync";
-import { Users, WifiOff, X, Copy, Check } from "lucide-react";
+import { useProgress } from "../hooks/useProgress";
+import { Users, WifiOff, X, Copy, Check, Download, Upload } from "lucide-react";
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { shareKey, nickname, activeUsers, isConnected, syncEntered, joinShare, leaveShare, toggleSyncEntered, updateNickname } = useSync();
+  const { progressState, itemMetadata, restoreBackup } = useProgress();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inputKey, setInputKey] = useState("");
   const [inputNick, setInputNick] = useState("");
   const [copied, setCopied] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const data = {
+      progress: progressState,
+      metadata: itemMetadata
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aadl_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        restoreBackup(data);
+        alert("Backup restored successfully!");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse backup file.");
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
 
   useEffect(() => {
     const target = document.getElementById('sync-btn-portal');
@@ -201,6 +236,34 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                   </button>
                 </div>
               )}
+
+              <div className="pt-4 border-t border-gray-100 space-y-4">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">Data Management</h3>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={handleExport}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200 transition-colors text-sm"
+                  >
+                    <Download className="w-4 h-4" /> Export Backup
+                  </button>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200 transition-colors text-sm"
+                  >
+                    <Upload className="w-4 h-4" /> Restore Backup
+                  </button>
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    ref={fileInputRef}
+                    onChange={handleImport}
+                    className="hidden" 
+                  />
+                </div>
+                <p className="text-xs text-gray-500 font-medium leading-snug">
+                  Exporting a backup allows you to download your progress. Restoring it will merge it with your current state and sync to your group if you are in one.
+                </p>
+              </div>
             </div>
           </div>
         </div>
