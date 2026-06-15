@@ -21,9 +21,17 @@ export function useSync() {
 
   const connect = useCallback(() => {
     if (!shareCode) return;
-    
-    // Default to localhost:3001, but could be configured via env
-    const wsUrl = process.env.NEXT_PUBLIC_SYNC_WS_URL || 'ws://localhost:3001';
+
+    const isProd = process.env.NODE_ENV === 'production';
+    const wsUrl = isProd 
+      ? process.env.NEXT_PUBLIC_PROD_SYNC_WS_URL 
+      : (process.env.NEXT_PUBLIC_DEV_SYNC_WS_URL || 'ws://localhost:3001');
+
+    if (!wsUrl) {
+      console.error('WebSocket URL is not configured.');
+      return;
+    }
+
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
