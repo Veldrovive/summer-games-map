@@ -64,7 +64,7 @@ wss.on('connection', (ws) => {
         const { event } = data; // event should have { type: 'status'|'metadata', id, status?, metadata?, updated_at }
         
         // Save to DB
-        await addShareEvent(currentChannel, event);
+        await addShareEvent(currentChannel, event, ws.nickname);
         
         // Broadcast to others in the channel
         const channelClients = channels.get(currentChannel);

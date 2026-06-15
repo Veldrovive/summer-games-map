@@ -23,6 +23,7 @@ async function initDb() {
         item_id VARCHAR(255) NOT NULL,
         status VARCHAR(50),
         metadata JSONB,
+        nickname VARCHAR(255),
         updated_at BIGINT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -31,6 +32,11 @@ async function initDb() {
     // Create an index for faster querying by share_code
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_share_events_share_code ON share_events(share_code);
+    `);
+
+    // Safely add nickname column if it doesn't exist (for migration)
+    await client.query(`
+      ALTER TABLE share_events ADD COLUMN IF NOT EXISTS nickname VARCHAR(255);
     `);
     
     console.log('Database initialized.');
@@ -46,17 +52,17 @@ async function createShareCode(code) {
 
 async function getShareEvents(shareCode) {
   const result = await pool.query(
-    'SELECT type, item_id, status, metadata, updated_at FROM share_events WHERE share_code = $1 ORDER BY updated_at ASC',
+    'SELECT type, item_id, status, metadata, nickname, updated_at FROM share_events WHERE share_code = $1 ORDER BY updated_at ASC',
     [shareCode]
   );
   return result.rows;
 }
 
-async function addShareEvent(shareCode, event) {
+async function addShareEvent(shareCode, event, nickname) {
   const { type, id: itemId, status, metadata, updated_at } = event;
   await pool.query(
-    'INSERT INTO share_events(share_code, type, item_id, status, metadata, updated_at) VALUES($1, $2, $3, $4, $5, $6)',
-    [shareCode, type, itemId, status, metadata ? JSON.stringify(metadata) : null, updated_at]
+    'INSERT INTO share_events(share_code, type, item_id, status, metadata, nickname, updated_at) VALUES($1, $2, $3, $4, $5, $6, $7)',
+    [shareCode, type, itemId, status, metadata ? JSON.stringify(metadata) : null, nickname, updated_at]
   );
 }
 
