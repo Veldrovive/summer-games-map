@@ -66,7 +66,7 @@ export function useSync() {
           applyRemoteEvent(data.event);
         } else if (data.type === 'users') {
           // Update active users
-          setActiveUsers(data.users || []);
+          setActiveUsers(Array.from(new Set(data.users || [])));
         }
       } catch (e) {
         console.error('Failed to parse WS message', e);

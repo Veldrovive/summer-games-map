@@ -50,7 +50,7 @@ wss.on('connection', (ws) => {
   const broadcastUsers = (shareKey) => {
     const channelClients = channels.get(shareKey);
     if (!channelClients) return;
-    const users = Array.from(channelClients).map(client => client.nickname).filter(Boolean);
+    const users = Array.from(new Set(Array.from(channelClients).map(client => client.nickname).filter(Boolean)));
     const msg = JSON.stringify({ type: 'users', users });
     for (const client of channelClients) {
       if (client.readyState === 1) {
