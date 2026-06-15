@@ -88,8 +88,11 @@ export function useSync() {
   }, [shareKey, nickname, syncEntered, setItemStatus, setItemMetadata]);
 
   const applyRemoteEvent = useCallback((event: any) => {
-    const { type, item_id, status, metadata, updated_at } = event;
+    const item_id = event.item_id || event.id;
+    const { type, status, metadata, updated_at } = event;
     
+    if (!item_id) return; // Safely ignore events without a valid id
+
     if (type === 'status') {
       if (status === 'entered' && !syncEntered) {
         return; // User opted out of syncing 'entered' state

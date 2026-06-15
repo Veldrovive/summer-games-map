@@ -31,7 +31,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     try {
       const storedV3 = localStorage.getItem('aadl_progress_v3');
       if (storedV3) {
-        setProgressState(JSON.parse(storedV3));
+        const parsed = JSON.parse(storedV3);
+        if (parsed["undefined"]) {
+          delete parsed["undefined"];
+          localStorage.setItem('aadl_progress_v3', JSON.stringify(parsed));
+        }
+        setProgressState(parsed);
       } else {
         // Migration from v2
         const storedV2 = localStorage.getItem('aadl_progress_v2');
@@ -65,7 +70,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     try {
       const meta = localStorage.getItem('aadl_metadata');
       if (meta) {
-        setItemMetadataState(JSON.parse(meta));
+        const parsedMeta = JSON.parse(meta);
+        if (parsedMeta["undefined"]) {
+          delete parsedMeta["undefined"];
+          localStorage.setItem('aadl_metadata', JSON.stringify(parsedMeta));
+        }
+        setItemMetadataState(parsedMeta);
       }
     } catch (e) {
       console.error("Failed to load metadata", e);
