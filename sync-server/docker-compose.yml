@@ -33,7 +33,7 @@ services:
     environment:
       - DATABASE_URL=postgres://sync_user:sync_password@db:5432/sync_db
       - PORT=3001
-      - ALLOWED_ORIGINS=https://sgmap.aidandevelops.com
+      - ALLOWED_ORIGINS=https://sgmap.aidandevelops.com,http://localhost:3000,http://localhost:3001
     depends_on:
       db:
         condition: service_healthy

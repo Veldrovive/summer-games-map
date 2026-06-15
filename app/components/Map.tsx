@@ -319,7 +319,7 @@ export default function Map({
       {/* Modal Overlay */}
       {popupInfo && !routeMode && (
         <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200">
             {(() => {
               const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
               const currentStatus = itemStatuses[id];
@@ -352,7 +352,7 @@ export default function Map({
 
               return (
                 <>
-                  <div className="flex justify-between items-center p-5 border-b bg-gray-50/80 backdrop-blur">
+                  <div className="flex justify-between items-center p-5 border-b bg-gray-50/80 backdrop-blur shrink-0">
                     <h3 className="font-extrabold text-xl text-gray-800 tracking-tight">
                       {popupInfo.type === 'biz' ? 'Business Code' : (popupInfo.type === 'home' ? 'Home Code' : 'Badge')}
                     </h3>

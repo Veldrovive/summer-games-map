@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+"use client";
+
+import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 
 export type ItemStatus = 'found' | 'not_found' | 'entered';
 
@@ -9,7 +11,19 @@ export type ProgressItem = {
 
 export type ItemMetadata = { notes?: string; code?: string, updated_at?: number };
 
-export function useProgress() {
+type ProgressContextType = {
+  progressState: Record<string, ProgressItem>;
+  itemStatuses: Record<string, ItemStatus>;
+  setItemStatus: (id: string, status: ItemStatus | null, remoteTimestamp?: number) => void;
+  toggleItem: (id: string) => void;
+  checkedItems: Set<string>;
+  itemMetadata: Record<string, ItemMetadata>;
+  setItemMetadata: (id: string, metadata: Partial<ItemMetadata>, remoteTimestamp?: number) => void;
+};
+
+const ProgressContext = createContext<ProgressContextType | null>(null);
+
+export function ProgressProvider({ children }: { children: ReactNode }) {
   const [progressState, setProgressState] = useState<Record<string, ProgressItem>>({});
   const [itemMetadata, setItemMetadataState] = useState<Record<string, ItemMetadata>>({});
 
@@ -38,7 +52,7 @@ export function useProgress() {
             if (Array.isArray(parsed)) {
               const migrated: Record<string, ProgressItem> = {};
               const now = Date.now();
-              parsed.forEach(id => { migrated[id] = { status: 'found', updated_at: now }; });
+              parsed.forEach((id: string) => { migrated[id] = { status: 'found', updated_at: now }; });
               setProgressState(migrated);
               localStorage.setItem('aadl_progress_v3', JSON.stringify(migrated));
             }
@@ -58,15 +72,28 @@ export function useProgress() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'aadl_progress_v3' && e.newValue) {
+        setProgressState(JSON.parse(e.newValue));
+      } else if (e.key === 'aadl_metadata' && e.newValue) {
+        setItemMetadataState(JSON.parse(e.newValue));
+      }
+    };
+    
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const setItemStatus = useCallback((id: string, status: ItemStatus | null, remoteTimestamp?: number) => {
+    let sideEffectsRun = false;
     setProgressState(prev => {
       const next = { ...prev };
-      
       const newTimestamp = remoteTimestamp ?? Date.now();
       
       // If we are applying a remote update, only apply if newer
       if (remoteTimestamp && prev[id] && prev[id].updated_at >= remoteTimestamp) {
-        return prev; // Ignore older remote updates
+        return prev;
       }
 
       if (status === null) {
@@ -74,25 +101,33 @@ export function useProgress() {
       } else {
         next[id] = { status, updated_at: newTimestamp };
       }
-      try {
-        localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
-        
-        // If it's a local change, add to offline queue
-        if (!remoteTimestamp) {
-          const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
-          queue.push({ type: 'status', id, status, updated_at: newTimestamp });
-          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+      
+      if (!sideEffectsRun) {
+        sideEffectsRun = true;
+        try {
+          localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
           
-          window.dispatchEvent(new CustomEvent('aadl_local_update'));
+          // If it's a local change, add to offline queue
+          if (!remoteTimestamp) {
+            const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+            queue.push({ type: 'status', id, status, updated_at: newTimestamp });
+            localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+            
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('aadl_local_update'));
+            }, 0);
+          }
+        } catch (e) {
+           console.error("Failed to save progress", e);
         }
-      } catch (e) {
-         console.error("Failed to save progress", e);
       }
+      
       return next;
     });
   }, []);
 
   const toggleItem = useCallback((id: string) => {
+    let sideEffectsRun = false;
     setProgressState(prev => {
       const next = { ...prev };
       const current = next[id]?.status;
@@ -107,21 +142,29 @@ export function useProgress() {
         next[id] = { status: 'found', updated_at: now };
       }
       
-      try {
-        localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
-        
-        const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
-        queue.push({ type: 'status', id, status: newStatus, updated_at: now });
-        localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
-        window.dispatchEvent(new CustomEvent('aadl_local_update'));
-      } catch (e) {
-         console.error("Failed to save progress", e);
+      if (!sideEffectsRun) {
+        sideEffectsRun = true;
+        try {
+          localStorage.setItem('aadl_progress_v3', JSON.stringify(next));
+          
+          const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+          queue.push({ type: 'status', id, status: newStatus, updated_at: now });
+          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+          
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('aadl_local_update'));
+          }, 0);
+        } catch (e) {
+           console.error("Failed to save progress", e);
+        }
       }
+      
       return next;
     });
   }, []);
 
   const setItemMetadata = useCallback((id: string, metadata: Partial<ItemMetadata>, remoteTimestamp?: number) => {
+    let sideEffectsRun = false;
     setItemMetadataState(prev => {
       const next = { ...prev };
       const newTimestamp = remoteTimestamp ?? Date.now();
@@ -133,18 +176,25 @@ export function useProgress() {
       
       next[id] = { ...(next[id] || {}), ...metadata, updated_at: newTimestamp };
       
-      try {
-        localStorage.setItem('aadl_metadata', JSON.stringify(next));
-        
-        if (!remoteTimestamp) {
-          const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
-          queue.push({ type: 'metadata', id, metadata, updated_at: newTimestamp });
-          localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
-          window.dispatchEvent(new CustomEvent('aadl_local_update'));
+      if (!sideEffectsRun) {
+        sideEffectsRun = true;
+        try {
+          localStorage.setItem('aadl_metadata', JSON.stringify(next));
+          
+          if (!remoteTimestamp) {
+            const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
+            queue.push({ type: 'metadata', id, metadata, updated_at: newTimestamp });
+            localStorage.setItem('aadl_offline_queue', JSON.stringify(queue));
+            
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('aadl_local_update'));
+            }, 0);
+          }
+        } catch (e) {
+           console.error("Failed to save metadata", e);
         }
-      } catch (e) {
-         console.error("Failed to save metadata", e);
       }
+      
       return next;
     });
   }, []);
@@ -157,5 +207,17 @@ export function useProgress() {
 
   const checkedItems = new Set(Object.keys(progressState).filter(k => progressState[k]?.status === 'found' || progressState[k]?.status === 'entered'));
 
-  return { progressState, itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata };
+  return (
+    <ProgressContext.Provider value={{ progressState, itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata }}>
+      {children}
+    </ProgressContext.Provider>
+  );
+}
+
+export function useProgress() {
+  const context = useContext(ProgressContext);
+  if (!context) {
+    throw new Error('useProgress must be used within a ProgressProvider');
+  }
+  return context;
 }
