@@ -39,3 +39,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## TODO
 Found and entered actual does found and entered
 Backup
+
+Filter by number of redemptions?
+Put the date in the modal

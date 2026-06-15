@@ -24,13 +24,13 @@ export default function Home() {
       try {
         const saved = localStorage.getItem('savedCenter');
         if (saved) return JSON.parse(saved);
-      } catch (e) {}
+      } catch (e) { }
     }
     return { lat: 42.2808, lon: -83.7430 };
   });
   const [radius, setRadius] = useState<number>(100000); // Default 100000 miles
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [liveLocation, setLiveLocation] = useState<{lat: number, lon: number} | null>(null);
+  const [liveLocation, setLiveLocation] = useState<{ lat: number, lon: number } | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && "geolocation" in navigator) {
@@ -73,14 +73,14 @@ export default function Home() {
         else if (target === '#tour-filters' || target === '#tour-route' || target === '#tour-found' || target === '#tour-sync' || target === '#tour-bug-report') setViewMode('filters');
       }
     };
-    
+
     const handleStart = () => {
       if (window.innerWidth < 768) setViewMode('map');
     };
 
     window.addEventListener('tour-step-before', handleTourStep);
     window.addEventListener('start-tutorial', handleStart);
-    
+
     return () => {
       window.removeEventListener('tour-step-before', handleTourStep);
       window.removeEventListener('start-tutorial', handleStart);
@@ -89,12 +89,12 @@ export default function Home() {
 
   // Routing
   const [routeMode, setRouteMode] = useState(false);
-  
+
   // Bug Report
   const [showBugModal, setShowBugModal] = useState(false);
-  const { 
-    routePoints, routeGeoJSON, isRouting, isEngineReady, 
-    addPoint, removePoint, clearRoute, calculateRoute, setAllVisible 
+  const {
+    routePoints, routeGeoJSON, isRouting, isEngineReady,
+    addPoint, removePoint, clearRoute, calculateRoute, setAllVisible
   } = useRouting();
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -164,7 +164,7 @@ export default function Home() {
         .filter(b => !checkedItems.has(`badge-${b.lat}-${b.lon}`))
         .map(b => ({ id: `badge-${b.lat}-${b.lon}`, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: 'Badge' }))
     ];
-    
+
     const targetLoc = liveLocation || center;
     if (liveLocation) {
       setCenter(liveLocation);
@@ -187,363 +187,363 @@ export default function Home() {
   return (
     <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
       <Tutorial />
-      
+
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
         {/* Sidebar */}
         <aside className={`w-full md:w-[420px] bg-white border-r border-gray-200 flex-col shadow-2xl z-10 h-full ${viewMode === 'filters' ? 'flex' : 'hidden md:flex'}`}>
-        <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-md flex justify-between items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Summer Game</h1>
-            <p className="text-blue-100 text-sm mt-1 font-medium opacity-90">Map Explorer & Tracker</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => window.dispatchEvent(new Event('start-tutorial'))}
-              className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center justify-center border border-white/20 backdrop-blur-sm"
-              title="Help & Tutorial"
-            >
-              <HelpCircle className="w-5 h-5 opacity-90" />
-            </button>
-            <div id="sync-btn-portal" className="shrink-0 flex items-center justify-center"></div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
-          
-          {/* Progress Stats */}
-          <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col gap-4">
+          <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-md flex justify-between items-center gap-4">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
-                <span className="text-blue-600/80 font-semibold text-sm">items found</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
-                <span className="text-red-500/80 font-semibold text-xs">items not found</span>
-              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight">Summer Game</h1>
+              <p className="text-blue-100 text-sm mt-1 font-medium opacity-90">Map Explorer & Tracker</p>
             </div>
-            <button
-              id="tour-found"
-              onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
-              className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
-            >
-              {viewMode === 'found' ? 'Return to Map' : 'View Found Codes'}
-            </button>
-          </section>
-
-          {/* Filters */}
-          <section id="tour-filters" className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" /> Map Filters
-            </h2>
-            
-            <div className="space-y-4">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={showBiz} onChange={e => setShowBiz(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-colors" />
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm ring-2 ring-white"></div>
-                  <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm">Business Codes</span>
-                </div>
-                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{data?.bizcodes.length || 0}</span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={showHome} onChange={e => setShowHome(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-colors" />
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm ring-2 ring-white"></div>
-                  <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm">Home Codes</span>
-                </div>
-                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{data?.homecodes.length || 0}</span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" checked={showBadges} onChange={e => setShowBadges(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500 transition-colors" />
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm ring-2 ring-white"></div>
-                  <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm">Badges</span>
-                </div>
-                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{data?.badges.length || 0}</span>
-              </label>
-
-              <div className="h-px bg-gray-100 my-4"></div>
-
-              <label className="flex items-center gap-3 cursor-pointer bg-gray-50 p-3 rounded-xl border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all shadow-sm">
-                <input type="checkbox" checked={hideChecked} onChange={e => setHideChecked(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-gray-700 focus:ring-gray-600" />
-                <span className="font-semibold text-gray-700 text-sm">Hide Checked Off Items</span>
-              </label>
-            </div>
-          </section>
-
-          {/* Route Builder */}
-          <section id="tour-route" className={`p-5 rounded-xl border shadow-sm transition-colors ${routeMode ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-100'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${routeMode ? 'text-indigo-700' : 'text-gray-500'}`}>
-                <RouteIcon className="w-4 h-4" /> Route Builder
-              </h2>
-              <button 
-                onClick={() => setRouteMode(!routeMode)}
-                className={`text-xs font-bold px-3 py-1.5 rounded-md transition-colors ${routeMode ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.dispatchEvent(new Event('start-tutorial'))}
+                className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center justify-center border border-white/20 backdrop-blur-sm"
+                title="Help & Tutorial"
               >
-                {routeMode ? 'Disable' : 'Enable'}
+                <HelpCircle className="w-5 h-5 opacity-90" />
               </button>
+              <div id="sync-btn-portal" className="shrink-0 flex items-center justify-center"></div>
             </div>
-            
-            {routeMode && (
-              <div className="space-y-4">
-                <p className="text-xs text-indigo-800 font-medium">
-                  {isEngineReady ? "Click markers on the map to add them to your route sequence." : "Loading routing engine..."}
-                </p>
-                
-                {routePoints.length > 0 && (
-                  <div className="bg-white rounded-lg border border-indigo-100 max-h-40 overflow-y-auto p-2 space-y-1">
-                    {routePoints.map((pt, i) => (
-                      <div key={pt.id} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border border-gray-100">
-                        <span className="font-bold text-gray-700 truncate mr-2">
-                          <span className="text-indigo-500 mr-1">{i + 1}.</span> 
-                          <span dangerouslySetInnerHTML={{ __html: pt.name || pt.id }} />
-                        </span>
-                        <button onClick={() => removePoint(pt.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-3 h-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => calculateRoute(false)} 
-                    disabled={!isEngineReady || routePoints.length < 2 || isRouting}
-                    className="flex items-center justify-center gap-1.5 bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
-                  >
-                    {isRouting ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Play className="w-3 h-3" />} Calculate
-                  </button>
-                  <button 
-                    onClick={() => calculateRoute(true)} 
-                    disabled={!isEngineReady || routePoints.length < 3 || isRouting}
-                    className="flex items-center justify-center gap-1.5 bg-purple-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 shadow-sm"
-                  >
-                    <Wand2 className="w-3 h-3" /> Optimize
-                  </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+
+            {/* Progress Stats */}
+            <section className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm flex flex-col gap-4">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Total Progress</h2>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-4xl font-extrabold text-blue-700 tracking-tight">{checkedItems.size}</span>
+                  <span className="text-blue-600/80 font-semibold text-sm">items found</span>
                 </div>
-                
-                <div className="flex gap-2">
-                  <button 
-                    onClick={handlePlanAllVisible} 
-                    className="flex-1 bg-white border border-indigo-200 text-indigo-700 text-xs font-bold py-2 rounded-lg hover:bg-indigo-50"
-                  >
-                    Add Closest 10
-                  </button>
-                  <button 
-                    onClick={clearRoute} 
-                    className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-3 py-2 rounded-lg hover:bg-red-100"
-                  >
-                    Clear
-                  </button>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold text-red-600 tracking-tight">{Object.values(itemStatuses).filter(s => s === 'not_found').length}</span>
+                  <span className="text-red-500/80 font-semibold text-xs">items not found</span>
                 </div>
-                
-                {routePoints.length > 0 && (
-                  <button
-                    onClick={() => {
-                      const origin = liveLocation ? `${liveLocation.lat},${liveLocation.lon}` : `${routePoints[0].lat},${routePoints[0].lon}`;
-                      const destIdx = routePoints.length - 1;
-                      const dest = `${routePoints[destIdx].lat},${routePoints[destIdx].lon}`;
-                      const waypoints = routePoints.slice(liveLocation ? 0 : 1, destIdx).map(p => `${p.lat},${p.lon}`).join('|');
-                      let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
-                      if (waypoints) url += `&waypoints=${waypoints}`;
-                      window.open(url, '_blank');
-                    }}
-                    className="w-full flex items-center justify-center gap-2 mt-2 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-emerald-700 shadow-sm transition-colors"
-                  >
-                    <Navigation className="w-4 h-4" /> Open Route in Google Maps
-                  </button>
-                )}
               </div>
-            )}
-          </section>
+              <button
+                id="tour-found"
+                onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
+                className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
+              >
+                {viewMode === 'found' ? 'Return to Map' : 'View Found Codes'}
+              </button>
+            </section>
 
-          {/* Bug Report */}
-          <section id="tour-bug-report" className="mt-8 pt-6 border-t border-gray-100 flex justify-center pb-4">
-            <button
-              onClick={() => setShowBugModal(true)}
-              className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600 transition-colors"
-            >
-              <Bug className="w-4 h-4" /> Report a Bug
-            </button>
-          </section>
+            {/* Filters */}
+            <section id="tour-filters" className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> Map Filters
+              </h2>
 
-        </div>
-      </aside>
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input type="checkbox" checked={showBiz} onChange={e => setShowBiz(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 transition-colors" />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="w-3.5 h-3.5 rounded-full bg-purple-500 shadow-sm ring-2 ring-white"></div>
+                    <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm">Business Codes</span>
+                  </div>
+                  <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{data?.bizcodes.length || 0}</span>
+                </label>
 
-      {/* Main Content Area */}
-      <main className={`flex-1 relative h-full ${viewMode === 'map' || viewMode === 'list' || viewMode === 'found' ? 'block' : 'hidden md:block'}`}>
-        {viewMode === 'map' && (
-          <>
-            <div className="absolute top-6 left-6 z-[1000] bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-gray-200 font-bold text-gray-800 text-sm flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              Showing {totalVisible} locations in range
-            </div>
-            <Map 
-              center={center} 
-              liveLocation={liveLocation}
-              bizcodes={filteredData.bizcodes} 
-              homecodes={filteredData.homecodes} 
-              badges={filteredData.badges}
-              itemStatuses={itemStatuses}
-              onSetItemStatus={setItemStatus}
-              itemMetadata={itemMetadata}
-              onSetItemMetadata={setItemMetadata}
-              routeMode={routeMode}
-              routePoints={routePoints}
-              routeGeoJSON={routeGeoJSON}
-              onAddRoutePoint={addPoint}
-            />
-          </>
-        )}
-        
-        {viewMode === 'list' && (
-          <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
-            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Locations List ({totalVisible})</h2>
-            <p className="text-gray-500 font-medium mb-8">Showing locations within {radius} miles of your center point.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredData.bizcodes.map(biz => {
-                 const id = biz.code_id;
-                 const status = itemStatuses[id];
-                 const isFoundOrEntered = status === 'found';
-                 const isNotFound = status === 'not_found';
-                 return (
-                   <div key={id} className={`p-5 rounded-2xl border transition-all flex flex-col ${isFoundOrEntered ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : (isNotFound ? 'bg-red-50 border-red-200 opacity-90 scale-[0.98]' : 'bg-white border-blue-100 shadow-md hover:shadow-lg')}`}>
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input type="checkbox" checked={showHome} onChange={e => setShowHome(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-colors" />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm ring-2 ring-white"></div>
+                    <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm">Home Codes</span>
+                  </div>
+                  <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{data?.homecodes.length || 0}</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input type="checkbox" checked={showBadges} onChange={e => setShowBadges(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500 transition-colors" />
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm ring-2 ring-white"></div>
+                    <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm">Badges</span>
+                  </div>
+                  <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{data?.badges.length || 0}</span>
+                </label>
+
+                <div className="h-px bg-gray-100 my-4"></div>
+
+                <label className="flex items-center gap-3 cursor-pointer bg-gray-50 p-3 rounded-xl border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all shadow-sm">
+                  <input type="checkbox" checked={hideChecked} onChange={e => setHideChecked(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-gray-700 focus:ring-gray-600" />
+                  <span className="font-semibold text-gray-700 text-sm">Hide Checked Off Items</span>
+                </label>
+              </div>
+            </section>
+
+            {/* Route Builder */}
+            <section id="tour-route" className={`p-5 rounded-xl border shadow-sm transition-colors ${routeMode ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-100'}`}>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${routeMode ? 'text-indigo-700' : 'text-gray-500'}`}>
+                  <RouteIcon className="w-4 h-4" /> Route Builder
+                </h2>
+                <button
+                  onClick={() => setRouteMode(!routeMode)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-md transition-colors ${routeMode ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  {routeMode ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+
+              {routeMode && (
+                <div className="space-y-4">
+                  <p className="text-xs text-indigo-800 font-medium">
+                    {isEngineReady ? "Click markers on the map to add them to your route sequence. The first one you click will be the starting point." : "Loading routing engine..."}
+                  </p>
+
+                  {routePoints.length > 0 && (
+                    <div className="bg-white rounded-lg border border-indigo-100 max-h-40 overflow-y-auto p-2 space-y-1">
+                      {routePoints.map((pt, i) => (
+                        <div key={pt.id} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                          <span className="font-bold text-gray-700 truncate mr-2">
+                            <span className="text-indigo-500 mr-1">{i + 1}.</span>
+                            <span dangerouslySetInnerHTML={{ __html: pt.name || pt.id }} />
+                          </span>
+                          <button onClick={() => removePoint(pt.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => calculateRoute(false)}
+                      disabled={!isEngineReady || routePoints.length < 2 || isRouting}
+                      className="flex items-center justify-center gap-1.5 bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+                    >
+                      {isRouting ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Play className="w-3 h-3" />} Calculate Path
+                    </button>
+                    <button
+                      onClick={() => calculateRoute(true)}
+                      disabled={!isEngineReady || routePoints.length < 3 || isRouting}
+                      className="flex items-center justify-center gap-1.5 bg-purple-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 shadow-sm"
+                    >
+                      <Wand2 className="w-3 h-3" /> Optimize Route
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePlanAllVisible}
+                      className="flex-1 bg-white border border-indigo-200 text-indigo-700 text-xs font-bold py-2 rounded-lg hover:bg-indigo-50"
+                    >
+                      Add Closest 10
+                    </button>
+                    <button
+                      onClick={clearRoute}
+                      className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-3 py-2 rounded-lg hover:bg-red-100"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  {routePoints.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const origin = liveLocation ? `${liveLocation.lat},${liveLocation.lon}` : `${routePoints[0].lat},${routePoints[0].lon}`;
+                        const destIdx = routePoints.length - 1;
+                        const dest = `${routePoints[destIdx].lat},${routePoints[destIdx].lon}`;
+                        const waypoints = routePoints.slice(liveLocation ? 0 : 1, destIdx).map(p => `${p.lat},${p.lon}`).join('|');
+                        let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
+                        if (waypoints) url += `&waypoints=${waypoints}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="w-full flex items-center justify-center gap-2 mt-2 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-emerald-700 shadow-sm transition-colors"
+                    >
+                      <Navigation className="w-4 h-4" /> Open Route in Google Maps
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Bug Report */}
+            <section id="tour-bug-report" className="mt-8 pt-6 border-t border-gray-100 flex justify-center pb-4">
+              <button
+                onClick={() => setShowBugModal(true)}
+                className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600 transition-colors"
+              >
+                <Bug className="w-4 h-4" /> Report a Bug
+              </button>
+            </section>
+
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main className={`flex-1 relative h-full ${viewMode === 'map' || viewMode === 'list' || viewMode === 'found' ? 'block' : 'hidden md:block'}`}>
+          {viewMode === 'map' && (
+            <>
+              <div className="absolute top-6 left-6 z-[1000] bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-gray-200 font-bold text-gray-800 text-sm flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                Showing {totalVisible} locations in range
+              </div>
+              <Map
+                center={center}
+                liveLocation={liveLocation}
+                bizcodes={filteredData.bizcodes}
+                homecodes={filteredData.homecodes}
+                badges={filteredData.badges}
+                itemStatuses={itemStatuses}
+                onSetItemStatus={setItemStatus}
+                itemMetadata={itemMetadata}
+                onSetItemMetadata={setItemMetadata}
+                routeMode={routeMode}
+                routePoints={routePoints}
+                routeGeoJSON={routeGeoJSON}
+                onAddRoutePoint={addPoint}
+              />
+            </>
+          )}
+
+          {viewMode === 'list' && (
+            <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
+              <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Locations List ({totalVisible})</h2>
+              <p className="text-gray-500 font-medium mb-8">Showing locations within {radius} miles of your center point.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredData.bizcodes.map(biz => {
+                  const id = biz.code_id;
+                  const status = itemStatuses[id];
+                  const isFoundOrEntered = status === 'found';
+                  const isNotFound = status === 'not_found';
+                  return (
+                    <div key={id} className={`p-5 rounded-2xl border transition-all flex flex-col ${isFoundOrEntered ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : (isNotFound ? 'bg-red-50 border-red-200 opacity-90 scale-[0.98]' : 'bg-white border-purple-100 shadow-md hover:shadow-lg')}`}>
                       <div className="flex gap-4 items-start flex-col flex-1">
                         <div className="flex items-center gap-2 w-full">
-                          <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0 ring-2 ring-blue-100"></div>
-                          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Business</span>
+                          <div className="w-3 h-3 rounded-full bg-purple-500 flex-shrink-0 ring-2 ring-purple-100"></div>
+                          <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Business</span>
                         </div>
                         <div className="flex-1 w-full">
                           <div dangerouslySetInnerHTML={{ __html: biz.bizcode }} className="text-sm mb-4 font-medium text-gray-800 leading-relaxed" />
                         </div>
                       </div>
                       <div className="w-full flex gap-2 mt-auto pt-4">
-                        <button onClick={() => setItemStatus(id, isFoundOrEntered ? null : 'found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isFoundOrEntered ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                        <button onClick={() => setItemStatus(id, isFoundOrEntered ? null : 'found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isFoundOrEntered ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
                           {isFoundOrEntered ? '✓ Found' : 'Found'}
                         </button>
                         <button onClick={() => setItemStatus(id, isNotFound ? null : 'not_found')} className={`flex-1 text-xs px-2 py-2.5 rounded-xl font-bold transition-colors shadow-sm ${isNotFound ? 'bg-red-500 text-white hover:bg-red-600 ring-2 ring-red-400 ring-offset-1' : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'}`}>
                           {isNotFound ? '✕ Missing' : 'Missing'}
                         </button>
                       </div>
-                   </div>
-                 );
-              })}
-            </div>
-          </div>
-        )}
-
-        {viewMode === 'found' && (
-          <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
-            <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Found Codes ({checkedItems.size})</h2>
-            <p className="text-gray-500 font-medium mb-8">Codes you've found. Check them off once you've entered them on the Summer Game site.</p>
-            
-            <div className="flex flex-col gap-4 max-w-3xl">
-              {(() => {
-                const items: any[] = [];
-                data?.bizcodes.forEach(b => {
-                  const status = itemStatuses[b.code_id];
-                  if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered });
-                });
-                data?.homecodes.forEach(h => {
-                  const id = h.code_id || `home-${h.lat}-${h.lon}`;
-                  const status = itemStatuses[id];
-                  if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered });
-                });
-                data?.badges.forEach(b => {
-                  const id = `badge-${b.lat}-${b.lon}`;
-                  const status = itemStatuses[id];
-                  if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered });
-                });
-                
-                items.sort((a, b) => {
-                  if (!a.entered && b.entered) return -1;
-                  if (a.entered && !b.entered) return 1;
-                  return 0;
-                });
-
-                if (items.length === 0) {
-                  return <div className="text-gray-500 bg-white p-6 rounded-xl border border-gray-200">You haven't found any codes yet.</div>;
-                }
-
-                return items.map(item => (
-                  <div key={item.id} className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col gap-3 ${item.entered ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 sm:gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
-                        </div>
-                        <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.entered ? 'line-through' : ''}`} />
-                      </div>
-                      
-                      <div className="w-full md:w-auto md:min-w-[150px]">
-                        <input
-                          type="text"
-                          placeholder="Code..."
-                          value={itemMetadata[item.id]?.code || ''}
-                          onChange={(e) => setItemMetadata(item.id, { code: e.target.value })}
-                          className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => setExpandedItems(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                          className="flex-1 md:flex-none text-center text-xs font-bold text-blue-600 bg-blue-50 px-2 sm:px-3 py-2.5 md:py-2 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
-                        >
-                          {expandedItems[item.id] ? 'Hide Notes' : 'Notes'}
-                        </button>
-                        <label className="flex items-center justify-center gap-2 cursor-pointer flex-1 md:flex-none bg-white px-2 sm:px-4 py-2.5 md:py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                          <input 
-                            type="checkbox" 
-                            checked={!!item.entered}
-                            onChange={(e) => setItemMetadata(item.id, { entered: e.target.checked })}
-                            className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-bold text-gray-700">Entered</span>
-                        </label>
-                      </div>
                     </div>
-                    {expandedItems[item.id] && (
-                      <div className="flex flex-col w-full pt-3 border-t border-gray-100">
-                        <textarea
-                          placeholder="Notes (optional)..."
-                          value={itemMetadata[item.id]?.notes || ''}
-                          onChange={(e) => setItemMetadata(item.id, { notes: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 min-h-[60px] bg-gray-50"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ));
-              })()}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+
+          {viewMode === 'found' && (
+            <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
+              <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Found Codes ({checkedItems.size})</h2>
+              <p className="text-gray-500 font-medium mb-8">Codes you've found. Check them off once you've entered them on the Summer Game site.</p>
+
+              <div className="flex flex-col gap-4 max-w-3xl">
+                {(() => {
+                  const items: any[] = [];
+                  data?.bizcodes.forEach(b => {
+                    const status = itemStatuses[b.code_id];
+                    if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered });
+                  });
+                  data?.homecodes.forEach(h => {
+                    const id = h.code_id || `home-${h.lat}-${h.lon}`;
+                    const status = itemStatuses[id];
+                    if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered });
+                  });
+                  data?.badges.forEach(b => {
+                    const id = `badge-${b.lat}-${b.lon}`;
+                    const status = itemStatuses[id];
+                    if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered });
+                  });
+
+                  items.sort((a, b) => {
+                    if (!a.entered && b.entered) return -1;
+                    if (a.entered && !b.entered) return 1;
+                    return 0;
+                  });
+
+                  if (items.length === 0) {
+                    return <div className="text-gray-500 bg-white p-6 rounded-xl border border-gray-200">You haven't found any codes yet.</div>;
+                  }
+
+                  return items.map(item => (
+                    <div key={item.id} className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col gap-3 ${item.entered ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 sm:gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
+                          </div>
+                          <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.entered ? 'line-through' : ''}`} />
+                        </div>
+
+                        <div className="w-full md:w-auto md:min-w-[150px]">
+                          <input
+                            type="text"
+                            placeholder="Code..."
+                            value={itemMetadata[item.id]?.code || ''}
+                            onChange={(e) => setItemMetadata(item.id, { code: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedItems(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                            className="flex-1 md:flex-none text-center text-xs font-bold text-blue-600 bg-blue-50 px-2 sm:px-3 py-2.5 md:py-2 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
+                          >
+                            {expandedItems[item.id] ? 'Hide Notes' : 'Notes'}
+                          </button>
+                          <label className="flex items-center justify-center gap-2 cursor-pointer flex-1 md:flex-none bg-white px-2 sm:px-4 py-2.5 md:py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={!!item.entered}
+                              onChange={(e) => setItemMetadata(item.id, { entered: e.target.checked })}
+                              className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-bold text-gray-700">Entered</span>
+                          </label>
+                        </div>
+                      </div>
+                      {expandedItems[item.id] && (
+                        <div className="flex flex-col w-full pt-3 border-t border-gray-100">
+                          <textarea
+                            placeholder="Notes (optional)..."
+                            value={itemMetadata[item.id]?.notes || ''}
+                            onChange={(e) => setItemMetadata(item.id, { notes: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 min-h-[60px] bg-gray-50"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
       {/* View Toggle (Mobile) */}
       <div className="pt-3 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] border-t border-gray-200 bg-white md:hidden shrink-0 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
-          <button 
-            onClick={() => setViewMode('filters')} 
+          <button
+            onClick={() => setViewMode('filters')}
             className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'filters' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
           >
             <SlidersHorizontal className="w-4 h-4" /> Menu
           </button>
-          <button 
-            onClick={() => setViewMode('map')} 
+          <button
+            onClick={() => setViewMode('map')}
             className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'map' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
           >
             <MapPin className="w-4 h-4" /> Map
           </button>
-          <button 
-            onClick={() => setViewMode('found')} 
+          <button
+            onClick={() => setViewMode('found')}
             className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'found' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
           >
             <CheckCircle2 className="w-4 h-4" /> Found

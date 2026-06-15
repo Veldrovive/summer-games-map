@@ -137,15 +137,18 @@ export default function Map({
     bizcodes.forEach((biz) => {
       const id = biz.code_id;
       const status = itemStatuses[id];
+      const isEntered = itemMetadata[id]?.entered;
       const seq = getRouteSequenceNumber(id);
 
-      let bgColor = '#3b82f6';
+      let bgColor = '#a855f7'; // purple-500
       if (seq !== undefined) {
-        bgColor = '#8b5cf6';
+        bgColor = '#3b82f6'; // blue-500
+      } else if (isEntered) {
+        bgColor = '#1f2937'; // gray-800
       } else if (status === 'found') {
-        bgColor = '#9ca3af';
+        bgColor = '#9ca3af'; // gray-400
       } else if (status === 'not_found') {
-        bgColor = '#ef4444';
+        bgColor = '#ef4444'; // red-500
       }
 
       features.push({
@@ -164,10 +167,12 @@ export default function Map({
     homecodes.forEach((home) => {
       const id = home.code_id || `home-${home.lat}-${home.lon}`;
       const status = itemStatuses[id];
+      const isEntered = itemMetadata[id]?.entered;
       const seq = getRouteSequenceNumber(id);
 
-      let bgColor = '#10b981';
-      if (seq !== undefined) bgColor = '#8b5cf6';
+      let bgColor = '#10b981'; // emerald-500
+      if (seq !== undefined) bgColor = '#3b82f6';
+      else if (isEntered) bgColor = '#1f2937';
       else if (status === 'found') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
@@ -187,10 +192,12 @@ export default function Map({
     badges.forEach((badge) => {
       const id = `badge-${badge.lat}-${badge.lon}`;
       const status = itemStatuses[id];
+      const isEntered = itemMetadata[id]?.entered;
       const seq = getRouteSequenceNumber(id);
 
-      let bgColor = '#f59e0b';
-      if (seq !== undefined) bgColor = '#8b5cf6';
+      let bgColor = '#f59e0b'; // amber-500
+      if (seq !== undefined) bgColor = '#3b82f6';
+      else if (isEntered) bgColor = '#1f2937';
       else if (status === 'found') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
@@ -211,7 +218,7 @@ export default function Map({
       type: 'FeatureCollection' as const,
       features
     };
-  }, [bizcodes, homecodes, badges, itemStatuses, getRouteSequenceNumber]);
+  }, [bizcodes, homecodes, badges, itemStatuses, itemMetadata, getRouteSequenceNumber]);
 
   const onMapClick = useCallback((e: any) => {
     if (e.features && e.features.length > 0) {
@@ -421,7 +428,7 @@ export default function Map({
                             }}
                             className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${currentStatus === 'found'
                               ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
-                              : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'))
+                              : (popupInfo.type === 'biz' ? 'bg-purple-600 hover:bg-purple-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'))
                               }`}
                           >
                             {currentStatus === 'found' ? "✓ Found" : "Found"}
@@ -440,7 +447,7 @@ export default function Map({
                             }}
                             className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${itemMetadata[id]?.entered
                               ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
-                              : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-700 hover:bg-amber-800'))
+                              : (popupInfo.type === 'biz' ? 'bg-purple-800 hover:bg-purple-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-700 hover:bg-amber-800'))
                               }`}
                           >
                             {itemMetadata[id]?.entered ? "✓ Entered" : "Found & Entered"}
