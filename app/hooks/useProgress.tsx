@@ -217,7 +217,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         let hasChanges = false;
         const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
 
-        for (const [id, item] of Object.entries(data.progress)) {
+        for (const [id, item] of Object.entries(data.progress || {})) {
           const prevItem = prev[id];
           if (!prevItem || prevItem.updated_at < item.updated_at) {
             next[id] = item;
@@ -244,7 +244,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         let hasChanges = false;
         const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
 
-        for (const [id, item] of Object.entries(data.metadata)) {
+        for (const [id, item] of Object.entries(data.metadata || {})) {
           const prevItem = prev[id];
           const itemTimestamp = item.updated_at || Date.now();
           const prevTimestamp = prevItem?.updated_at || 0;
