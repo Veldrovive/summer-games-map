@@ -227,7 +227,7 @@ export default function Map({
   const onMouseLeave = useCallback(() => setCursor(''), []);
 
   return (
-    <div className="relative w-full h-full">
+    <div id="tour-map" className="relative w-full h-full">
       <MapGL
         ref={mapRef}
         initialViewState={{

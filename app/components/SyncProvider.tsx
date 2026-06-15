@@ -101,6 +101,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       {(() => {
         const btn = (
           <button 
+            id="tour-sync"
             onClick={() => setIsModalOpen(true)}
             className={portalTarget 
               ? "bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center gap-2 border border-white/20 backdrop-blur-sm" 

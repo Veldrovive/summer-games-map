@@ -6,9 +6,10 @@ import { useMapData } from "./hooks/useMapData";
 import { useProgress } from "./hooks/useProgress";
 import { calculateDistance } from "./lib/distance";
 import { geocodeAddress } from "./lib/geocoding";
-import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound, HelpCircle, Bug } from "lucide-react";
 import { useRouting } from "./hooks/useRouting";
 import Link from "next/link";
+import { Tutorial } from "./components/Tutorial";
 
 // Dynamically import map to avoid SSR issues
 const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-100 font-medium text-gray-500">Loading Map...</div> });
@@ -63,8 +64,34 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<"map" | "list" | "filters" | "found">("map");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  useEffect(() => {
+    const handleTourStep = (e: any) => {
+      const target = e.detail?.target;
+      // On mobile (width < 768px typically matches the md: hidden classes)
+      if (window.innerWidth < 768) {
+        if (target === '#tour-map' || target === 'body') setViewMode('map');
+        else if (target === '#tour-filters' || target === '#tour-route' || target === '#tour-found' || target === '#tour-sync' || target === '#tour-bug-report') setViewMode('filters');
+      }
+    };
+    
+    const handleStart = () => {
+      if (window.innerWidth < 768) setViewMode('map');
+    };
+
+    window.addEventListener('tour-step-before', handleTourStep);
+    window.addEventListener('start-tutorial', handleStart);
+    
+    return () => {
+      window.removeEventListener('tour-step-before', handleTourStep);
+      window.removeEventListener('start-tutorial', handleStart);
+    };
+  }, []);
+
   // Routing
   const [routeMode, setRouteMode] = useState(false);
+  
+  // Bug Report
+  const [showBugModal, setShowBugModal] = useState(false);
   const { 
     routePoints, routeGeoJSON, isRouting, isEngineReady, 
     addPoint, removePoint, clearRoute, calculateRoute, setAllVisible 
@@ -159,6 +186,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
+      <Tutorial />
       
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
         {/* Sidebar */}
@@ -168,7 +196,16 @@ export default function Home() {
             <h1 className="text-2xl font-extrabold tracking-tight">Summer Game</h1>
             <p className="text-blue-100 text-sm mt-1 font-medium opacity-90">Map Explorer & Tracker</p>
           </div>
-          <div id="sync-btn-portal" className="shrink-0 flex items-center justify-center"></div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => window.dispatchEvent(new Event('start-tutorial'))}
+              className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center justify-center border border-white/20 backdrop-blur-sm"
+              title="Help & Tutorial"
+            >
+              <HelpCircle className="w-5 h-5 opacity-90" />
+            </button>
+            <div id="sync-btn-portal" className="shrink-0 flex items-center justify-center"></div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
@@ -187,6 +224,7 @@ export default function Home() {
               </div>
             </div>
             <button
+              id="tour-found"
               onClick={() => setViewMode(viewMode === 'found' ? 'map' : 'found')}
               className={`w-full py-2.5 rounded-lg font-bold text-sm transition-colors ${viewMode === 'found' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 shadow-sm'}`}
             >
@@ -195,7 +233,7 @@ export default function Home() {
           </section>
 
           {/* Filters */}
-          <section className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+          <section id="tour-filters" className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" /> Map Filters
             </h2>
@@ -238,7 +276,7 @@ export default function Home() {
           </section>
 
           {/* Route Builder */}
-          <section className={`p-5 rounded-xl border shadow-sm transition-colors ${routeMode ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-100'}`}>
+          <section id="tour-route" className={`p-5 rounded-xl border shadow-sm transition-colors ${routeMode ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-100'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-sm font-bold uppercase tracking-wider flex items-center gap-2 ${routeMode ? 'text-indigo-700' : 'text-gray-500'}`}>
                 <RouteIcon className="w-4 h-4" /> Route Builder
@@ -321,6 +359,16 @@ export default function Home() {
                 )}
               </div>
             )}
+          </section>
+
+          {/* Bug Report */}
+          <section id="tour-bug-report" className="mt-8 pt-6 border-t border-gray-100 flex justify-center pb-4">
+            <button
+              onClick={() => setShowBugModal(true)}
+              className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600 transition-colors"
+            >
+              <Bug className="w-4 h-4" /> Report a Bug
+            </button>
           </section>
 
         </div>
@@ -502,6 +550,48 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      {/* Bug Report Modal */}
+      {showBugModal && (
+        <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b bg-red-50 shrink-0">
+              <h3 className="font-extrabold text-xl text-red-800 flex items-center gap-2">
+                <Bug className="w-6 h-6" /> Report a Bug
+              </h3>
+              <button
+                onClick={() => setShowBugModal(false)}
+                className="text-red-400 hover:text-red-600 hover:bg-red-100 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 font-medium mb-4">
+                Before reporting a bug, see if it already exists on the issues page.
+              </p>
+              <div className="flex flex-col gap-3">
+                <a
+                  href="https://github.com/Veldrovive/summer-games-map/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl text-center transition-colors border border-gray-200"
+                >
+                  View Existing Issues
+                </a>
+                <a
+                  href="https://github.com/Veldrovive/summer-games-map/issues/new/choose"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-center transition-colors shadow-sm"
+                >
+                  Open a New Issue
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
