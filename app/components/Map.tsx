@@ -115,14 +115,14 @@ export default function Map({
     const allRedemptions = [...bizcodes, ...homecodes, ...badges]
       .map(item => parseInt((item as any).num_redemptions) || 0)
       .sort((a, b) => a - b);
-    
+
     if (allRedemptions.length === 0) return { p20: 0, p40: 0, p60: 0, p80: 0 };
-    
+
     const getPercentile = (p: number) => {
       const idx = Math.floor(p * allRedemptions.length);
       return allRedemptions[Math.min(idx, allRedemptions.length - 1)];
     };
-    
+
     return {
       p20: getPercentile(0.2),
       p40: getPercentile(0.4),
@@ -305,11 +305,10 @@ export default function Map({
         <div className="absolute bottom-8 right-8 z-[1000]">
           <button
             onClick={() => setIsFollowing(true)}
-            className={`p-3 rounded-full shadow-lg border transition-colors ${
-              isFollowing 
-                ? 'bg-blue-600 text-white border-blue-700' 
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-            }`}
+            className={`p-3 rounded-full shadow-lg border transition-colors ${isFollowing
+              ? 'bg-blue-600 text-white border-blue-700'
+              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+              }`}
             title="Follow My Location"
           >
             {isFollowing ? <LocateFixed className="w-6 h-6" /> : <Locate className="w-6 h-6" />}
@@ -324,16 +323,16 @@ export default function Map({
             {(() => {
               const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
               const currentStatus = itemStatuses[id];
-              
+
               const rawContent = popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup);
-              const displayContent = (popupInfo.type === 'biz' || popupInfo.type === 'home') 
-                ? rawContent.split(/<br\s*\/?>|\n/i)[0] 
+              const displayContent = (popupInfo.type === 'biz' || popupInfo.type === 'home')
+                ? rawContent.split(/<br\s*\/?>|\n/i)[0]
                 : rawContent;
 
               const numRedemptions = parseInt(popupInfo.num_redemptions) || 0;
               let usageLabel = 'Unused';
               let usageColor = 'bg-gray-100 text-gray-600 border-gray-200';
-              
+
               if (numRedemptions > redemptionPercentiles.p80) {
                 usageLabel = 'Very High';
                 usageColor = 'bg-red-100 text-red-700 border-red-200';
@@ -346,11 +345,11 @@ export default function Map({
               } else if (numRedemptions > redemptionPercentiles.p20) {
                 usageLabel = 'Low';
                 usageColor = 'bg-blue-100 text-blue-700 border-blue-200';
-              } else {
-                usageLabel = 'Unused';
+              } else if (numRedemptions > 0) {
+                usageLabel = 'Rarely Used';
                 usageColor = 'bg-gray-100 text-gray-600 border-gray-200';
               }
-              
+
               return (
                 <>
                   <div className="flex justify-between items-center p-5 border-b bg-gray-50/80 backdrop-blur">
@@ -365,7 +364,7 @@ export default function Map({
                       ✕
                     </button>
                   </div>
-                  
+
                   <div className="p-6 overflow-y-auto max-h-[75vh]">
                     {popupInfo.type === 'badge' && popupInfo.image && (
                       <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-lg" />

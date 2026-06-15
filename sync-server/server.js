@@ -3,7 +3,7 @@ const express = require('express');
 const { createServer } = require('http');
 const { WebSocketServer } = require('ws');
 const cors = require('cors');
-const { initDb, createShareCode, getShareEvents, addShareEvent } = require('./db');
+const { initDb, createShareKey, getShareEvents, addShareEvent } = require('./db');
 
 const app = express();
 app.use(cors());
@@ -12,14 +12,14 @@ app.use(express.json());
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Map of shareCode -> Set of WebSocket clients
+// Map of shareKey -> Set of WebSocket clients
 const channels = new Map();
 
 wss.on('connection', (ws) => {
   let currentChannel = null;
 
-  const broadcastUsers = (shareCode) => {
-    const channelClients = channels.get(shareCode);
+  const broadcastUsers = (shareKey) => {
+    const channelClients = channels.get(shareKey);
     if (!channelClients) return;
     const users = Array.from(channelClients).map(client => client.nickname).filter(Boolean);
     const msg = JSON.stringify({ type: 'users', users });
@@ -35,26 +35,26 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message);
       
       if (data.type === 'join') {
-        const { shareCode, nickname } = data;
-        if (!shareCode) return;
+        const { shareKey, nickname } = data;
+        if (!shareKey) return;
         
-        currentChannel = shareCode;
+        currentChannel = shareKey;
         ws.nickname = nickname || 'Anonymous';
 
-        if (!channels.has(shareCode)) {
-          channels.set(shareCode, new Set());
+        if (!channels.has(shareKey)) {
+          channels.set(shareKey, new Set());
         }
-        channels.get(shareCode).add(ws);
+        channels.get(shareKey).add(ws);
         
-        // Ensure share code exists in DB
-        await createShareCode(shareCode);
+        // Ensure share key exists in DB
+        await createShareKey(shareKey);
         
         // Send all past events to the new client
-        const events = await getShareEvents(shareCode);
+        const events = await getShareEvents(shareKey);
         ws.send(JSON.stringify({ type: 'sync', events }));
 
         // Broadcast updated user list
-        broadcastUsers(shareCode);
+        broadcastUsers(shareKey);
       } else if (data.type === 'update_nickname') {
         if (!currentChannel) return;
         ws.nickname = data.nickname || 'Anonymous';
@@ -98,10 +98,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Optional: REST endpoint to create a share code (clients can just generate one and join via WS, but this is explicit)
+// Optional: REST endpoint to create a share key (clients can just generate one and join via WS, but this is explicit)
 app.post('/api/shares', async (req, res) => {
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-  await createShareCode(code);
+  await createShareKey(code);
   res.json({ code });
 });
 

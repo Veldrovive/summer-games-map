@@ -3,7 +3,7 @@ import { useProgress } from './useProgress';
 
 export function useSync() {
   const { setItemStatus, setItemMetadata } = useProgress();
-  const [shareCode, setShareCode] = useState<string | null>(null);
+  const [shareKey, setShareKey] = useState<string | null>(null);
   const [nickname, setNickname] = useState<string>('');
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -15,8 +15,8 @@ export function useSync() {
 
   useEffect(() => {
     // Load saved preferences
-    const savedCode = localStorage.getItem('aadl_share_code');
-    if (savedCode) setShareCode(savedCode);
+    const savedKey = localStorage.getItem('aadl_share_key');
+    if (savedKey) setShareKey(savedKey);
     const savedNickname = localStorage.getItem('aadl_nickname');
     if (savedNickname) setNickname(savedNickname);
     const savedSyncEntered = localStorage.getItem('aadl_sync_entered');
@@ -24,7 +24,7 @@ export function useSync() {
   }, []);
 
   const connect = useCallback(() => {
-    if (!shareCode) return;
+    if (!shareKey) return;
 
     const isProd = process.env.NODE_ENV === 'production';
     const wsUrl = isProd 
@@ -41,7 +41,7 @@ export function useSync() {
 
     ws.onopen = () => {
       setIsConnected(true);
-      ws.send(JSON.stringify({ type: 'join', shareCode, nickname }));
+      ws.send(JSON.stringify({ type: 'join', shareKey, nickname }));
       
       // Flush offline queue
       const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
@@ -77,7 +77,7 @@ export function useSync() {
       setIsConnected(false);
       // Attempt reconnect after 5s
       reconnectTimeoutRef.current = setTimeout(() => {
-        if (shareCode) connect();
+        if (shareKey) connect();
       }, 5000);
     };
     
@@ -85,7 +85,7 @@ export function useSync() {
       console.error('WS Error:', err);
     };
 
-  }, [shareCode, nickname, syncEntered, setItemStatus, setItemMetadata]);
+  }, [shareKey, nickname, syncEntered, setItemStatus, setItemMetadata]);
 
   const applyRemoteEvent = useCallback((event: any) => {
     const { type, item_id, status, metadata, updated_at } = event;
@@ -101,7 +101,7 @@ export function useSync() {
   }, [syncEntered, setItemStatus, setItemMetadata]);
 
   useEffect(() => {
-    if (shareCode) {
+    if (shareKey) {
       connect();
     }
     return () => {
@@ -112,12 +112,12 @@ export function useSync() {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [connect, shareCode]);
+  }, [connect, shareKey]);
 
   // Listen to local updates and broadcast them
   useEffect(() => {
     const handleLocalUpdate = () => {
-      if (!shareCode) return;
+      if (!shareKey) return;
       const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
       if (queue.length === 0) return;
       
@@ -133,12 +133,12 @@ export function useSync() {
     return () => {
       window.removeEventListener('aadl_local_update', handleLocalUpdate);
     };
-  }, [shareCode]);
+  }, [shareKey]);
 
-  const joinShare = (code: string, nick?: string) => {
-    const upperCode = code.toUpperCase();
-    setShareCode(upperCode);
-    localStorage.setItem('aadl_share_code', upperCode);
+  const joinShare = (key: string, nick?: string) => {
+    const upperKey = key.toUpperCase();
+    setShareKey(upperKey);
+    localStorage.setItem('aadl_share_key', upperKey);
     if (nick) {
       setNickname(nick);
       localStorage.setItem('aadl_nickname', nick);
@@ -154,8 +154,8 @@ export function useSync() {
   };
 
   const leaveShare = () => {
-    setShareCode(null);
-    localStorage.removeItem('aadl_share_code');
+    setShareKey(null);
+    localStorage.removeItem('aadl_share_key');
     if (wsRef.current) {
       wsRef.current.close();
     }
@@ -167,7 +167,7 @@ export function useSync() {
   };
 
   return {
-    shareCode,
+    shareKey,
     nickname,
     activeUsers,
     isConnected,

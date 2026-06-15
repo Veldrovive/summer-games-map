@@ -45,31 +45,31 @@ async function initDb() {
   }
 }
 
-async function createShareCode(code) {
+async function createShareKey(code) {
   await pool.query('INSERT INTO shares(code) VALUES($1) ON CONFLICT DO NOTHING', [code]);
   return code;
 }
 
-async function getShareEvents(shareCode) {
+async function getShareEvents(shareKey) {
   const result = await pool.query(
     'SELECT type, item_id, status, metadata, nickname, updated_at FROM share_events WHERE share_code = $1 ORDER BY updated_at ASC',
-    [shareCode]
+    [shareKey]
   );
   return result.rows;
 }
 
-async function addShareEvent(shareCode, event, nickname) {
+async function addShareEvent(shareKey, event, nickname) {
   const { type, id: itemId, status, metadata, updated_at } = event;
   await pool.query(
     'INSERT INTO share_events(share_code, type, item_id, status, metadata, nickname, updated_at) VALUES($1, $2, $3, $4, $5, $6, $7)',
-    [shareCode, type, itemId, status, metadata ? JSON.stringify(metadata) : null, nickname, updated_at]
+    [shareKey, type, itemId, status, metadata ? JSON.stringify(metadata) : null, nickname, updated_at]
   );
 }
 
 module.exports = {
   pool,
   initDb,
-  createShareCode,
+  createShareKey,
   getShareEvents,
   addShareEvent
 };
