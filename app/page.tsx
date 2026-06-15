@@ -138,15 +138,20 @@ export default function Home() {
         .map(b => ({ id: `badge-${b.lat}-${b.lon}`, lat: parseFloat(b.lat), lon: parseFloat(b.lon), name: 'Badge' }))
     ];
     
-    // Sort by distance to center
+    const targetLoc = liveLocation || center;
+    if (liveLocation) {
+      setCenter(liveLocation);
+    }
+
+    // Sort by distance to target location
     allPoints.sort((a, b) => {
-      const distA = calculateDistance(center.lat, center.lon, a.lat, a.lon);
-      const distB = calculateDistance(center.lat, center.lon, b.lat, b.lon);
+      const distA = calculateDistance(targetLoc.lat, targetLoc.lon, a.lat, a.lon);
+      const distB = calculateDistance(targetLoc.lat, targetLoc.lon, b.lat, b.lon);
       return distA - distB;
     });
 
-    // Cap to 25 closest to avoid freezing TSP
-    setAllVisible(allPoints.slice(0, 25));
+    // Cap to 10 closest to avoid freezing TSP
+    setAllVisible(allPoints.slice(0, 10));
   };
 
   if (loading) return <div className="h-[100dvh] w-screen flex items-center justify-center bg-gray-50 text-xl font-medium text-gray-700">Loading Map Data...</div>;
@@ -279,7 +284,7 @@ export default function Home() {
                     disabled={!isEngineReady || routePoints.length < 3 || isRouting}
                     className="flex items-center justify-center gap-1.5 bg-purple-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 shadow-sm"
                   >
-                    <Wand2 className="w-3 h-3" /> TSP Optimize
+                    <Wand2 className="w-3 h-3" /> Optimize
                   </button>
                 </div>
                 
@@ -288,7 +293,7 @@ export default function Home() {
                     onClick={handlePlanAllVisible} 
                     className="flex-1 bg-white border border-indigo-200 text-indigo-700 text-xs font-bold py-2 rounded-lg hover:bg-indigo-50"
                   >
-                    Add Closest 25
+                    Add Closest 10
                   </button>
                   <button 
                     onClick={clearRoute} 

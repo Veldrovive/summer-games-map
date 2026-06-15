@@ -112,7 +112,7 @@ export default function Map({
   }, [routeMode, routePoints]);
 
   const redemptionPercentiles = useMemo(() => {
-    const allRedemptions = [...bizcodes, ...homecodes, ...badges]
+    const allRedemptions = [...bizcodes, ...homecodes]
       .map(item => parseInt((item as any).num_redemptions) || 0)
       .sort((a, b) => a - b);
 
@@ -129,7 +129,7 @@ export default function Map({
       p60: getPercentile(0.6),
       p80: getPercentile(0.8)
     };
-  }, [bizcodes, homecodes, badges]);
+  }, [bizcodes, homecodes]);
 
   const geojsonFeatures = useMemo(() => {
     const features: any[] = [];
@@ -377,15 +377,17 @@ export default function Map({
                       />
                     </div>
 
-                    <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Redemptions</span>
-                        <span className="text-2xl font-bold text-gray-800">{numRedemptions.toLocaleString()}</span>
+                    {popupInfo.type !== 'badge' && (
+                      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Redemptions</span>
+                          <span className="text-2xl font-bold text-gray-800">{numRedemptions.toLocaleString()}</span>
+                        </div>
+                        <div className={`px-4 py-1.5 rounded-full border text-sm font-bold shadow-sm ${usageColor}`}>
+                          {usageLabel}
+                        </div>
                       </div>
-                      <div className={`px-4 py-1.5 rounded-full border text-sm font-bold shadow-sm ${usageColor}`}>
-                        {usageLabel}
-                      </div>
-                    </div>
+                    )}
 
                     <div className="flex flex-col gap-5">
                       <div className="flex flex-col gap-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
