@@ -6,11 +6,40 @@ const cors = require('cors');
 const { initDb, createShareKey, getShareEvents, addShareEvent } = require('./db');
 
 const app = express();
-app.use(cors());
+
+const allowedOriginsStr = process.env.ALLOWED_ORIGINS;
+const allowedOrigins = allowedOriginsStr ? allowedOriginsStr.split(',').map(s => s.trim()) : ['*'];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  verifyClient: (info, cb) => {
+    if (allowedOrigins.includes('*')) {
+      cb(true);
+    } else {
+      const origin = info.origin;
+      // Allow if no origin (e.g. server-to-server) or origin matches
+      if (!origin || allowedOrigins.includes(origin)) {
+        cb(true);
+      } else {
+        cb(false, 401, 'Unauthorized');
+      }
+    }
+  }
+});
 
 // Map of shareKey -> Set of WebSocket clients
 const channels = new Map();
