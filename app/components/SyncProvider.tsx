@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useSync } from "../hooks/useSync";
 import { Users, WifiOff, X, Copy, Check } from "lucide-react";
 
@@ -10,6 +11,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [inputCode, setInputCode] = useState("");
   const [inputNick, setInputNick] = useState("");
   const [copied, setCopied] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const target = document.getElementById('sync-btn-portal');
+    if (target) {
+      setPortalTarget(target);
+    } else {
+      const observer = new MutationObserver(() => {
+        const t = document.getElementById('sync-btn-portal');
+        if (t) {
+          setPortalTarget(t);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      return () => observer.disconnect();
+    }
+  }, []);
 
   // Sync inputNick with nickname from localStorage once it's loaded
   useEffect(() => {
@@ -43,14 +62,22 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         </div>
       )}
       
-      {/* Floating Share Button */}
-      <button 
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-4 left-4 md:left-[calc(420px+1rem)] z-[9990] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2"
-      >
-        <Users className="w-5 h-5" />
-        {shareCode ? <span className="font-bold pr-1">{shareCode}</span> : null}
-      </button>
+      {/* Share Button (Portaled or Floating) */}
+      {(() => {
+        const btn = (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className={portalTarget 
+              ? "bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center gap-2 border border-white/20 backdrop-blur-sm" 
+              : "fixed bottom-4 left-4 md:left-[calc(420px+1rem)] z-[9990] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2"}
+            title="Group Sync"
+          >
+            <Users className={portalTarget ? "w-5 h-5 opacity-90" : "w-5 h-5"} />
+            {shareCode ? <span className="font-bold pr-1 text-sm tracking-widest">{shareCode}</span> : null}
+          </button>
+        );
+        return portalTarget ? createPortal(btn, portalTarget) : btn;
+      })()}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">

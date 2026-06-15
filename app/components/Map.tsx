@@ -111,6 +111,26 @@ export default function Map({
     return idx !== -1 ? idx + 1 : undefined;
   }, [routeMode, routePoints]);
 
+  const redemptionPercentiles = useMemo(() => {
+    const allRedemptions = [...bizcodes, ...homecodes, ...badges]
+      .map(item => parseInt((item as any).num_redemptions) || 0)
+      .sort((a, b) => a - b);
+    
+    if (allRedemptions.length === 0) return { p20: 0, p40: 0, p60: 0, p80: 0 };
+    
+    const getPercentile = (p: number) => {
+      const idx = Math.floor(p * allRedemptions.length);
+      return allRedemptions[Math.min(idx, allRedemptions.length - 1)];
+    };
+    
+    return {
+      p20: getPercentile(0.2),
+      p40: getPercentile(0.4),
+      p60: getPercentile(0.6),
+      p80: getPercentile(0.8)
+    };
+  }, [bizcodes, homecodes, badges]);
+
   const geojsonFeatures = useMemo(() => {
     const features: any[] = [];
 
@@ -299,117 +319,145 @@ export default function Map({
 
       {/* Modal Overlay */}
       {popupInfo && !routeMode && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
-            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-              <h3 className="font-bold text-lg text-gray-800">
-                {popupInfo.type === 'biz' ? 'Business Code' : (popupInfo.type === 'home' ? 'Home Code' : 'Badge')}
-              </h3>
-              <button
-                onClick={() => setPopupInfo(null)}
-                className="text-gray-500 hover:text-gray-800 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
-                aria-label="Close modal"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              {popupInfo.type === 'badge' && popupInfo.image && (
-                <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-md" />
-              )}
+        <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200">
+            {(() => {
+              const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
+              const currentStatus = itemStatuses[id];
+              
+              const rawContent = popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup);
+              const displayContent = (popupInfo.type === 'biz' || popupInfo.type === 'home') 
+                ? rawContent.split(/<br\s*\/?>|\n/i)[0] 
+                : rawContent;
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: popupInfo.type === 'biz' ? popupInfo.bizcode : (popupInfo.type === 'home' ? popupInfo.homecode : popupInfo.popup)
-                  }}
-                  className={`text-gray-800 text-lg ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''} prose prose-sm max-w-none`}
-                />
-              </div>
+              const numRedemptions = parseInt(popupInfo.num_redemptions) || 0;
+              let usageLabel = 'Unused';
+              let usageColor = 'bg-gray-100 text-gray-600 border-gray-200';
+              
+              if (numRedemptions > redemptionPercentiles.p80) {
+                usageLabel = 'Very High';
+                usageColor = 'bg-red-100 text-red-700 border-red-200';
+              } else if (numRedemptions > redemptionPercentiles.p60) {
+                usageLabel = 'High';
+                usageColor = 'bg-orange-100 text-orange-700 border-orange-200';
+              } else if (numRedemptions > redemptionPercentiles.p40) {
+                usageLabel = 'Medium';
+                usageColor = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+              } else if (numRedemptions > redemptionPercentiles.p20) {
+                usageLabel = 'Low';
+                usageColor = 'bg-blue-100 text-blue-700 border-blue-200';
+              } else {
+                usageLabel = 'Unused';
+                usageColor = 'bg-gray-100 text-gray-600 border-gray-200';
+              }
+              
+              return (
+                <>
+                  <div className="flex justify-between items-center p-5 border-b bg-gray-50/80 backdrop-blur">
+                    <h3 className="font-extrabold text-xl text-gray-800 tracking-tight">
+                      {popupInfo.type === 'biz' ? 'Business Code' : (popupInfo.type === 'home' ? 'Home Code' : 'Badge')}
+                    </h3>
+                    <button
+                      onClick={() => setPopupInfo(null)}
+                      className="text-gray-400 hover:text-gray-600 hover:bg-gray-200 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                      aria-label="Close modal"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto max-h-[75vh]">
+                    {popupInfo.type === 'badge' && popupInfo.image && (
+                      <img src={`https://aadl.org${popupInfo.image}`} alt="Badge" className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-lg" />
+                    )}
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: "Number of redemptions: " + popupInfo.num_redemptions
-                  }}
-                  className={`text-gray-800 text-lg ${popupInfo.type === 'badge' ? 'text-center font-medium' : ''} prose prose-sm max-w-none`}
-                />
-              </div>
-
-              {(() => {
-                const id = popupInfo.type === 'biz' ? popupInfo.code_id : (popupInfo.type === 'home' ? (popupInfo.code_id || `home-${popupInfo.lat}-${popupInfo.lon}`) : `badge-${popupInfo.lat}-${popupInfo.lon}`);
-                const currentStatus = itemStatuses[id];
-                const isFoundOrEntered = currentStatus === 'found' || currentStatus === 'entered';
-                return (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-sm font-bold text-gray-700">Code (optional):</span>
-                        <input
-                          type="text"
-                          placeholder="Enter the code..."
-                          value={itemMetadata[id]?.code || ''}
-                          onChange={(e) => onSetItemMetadata(id, { code: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-sm font-bold text-gray-700">Notes (optional):</span>
-                        <textarea
-                          placeholder="Add generic notes here..."
-                          value={itemMetadata[id]?.notes || ''}
-                          onChange={(e) => onSetItemMetadata(id, { notes: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 min-h-[60px]"
-                        />
-                      </label>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6 text-center">
+                      <div
+                        dangerouslySetInnerHTML={{ __html: displayContent }}
+                        className={`text-gray-800 text-xl font-medium prose prose-sm max-w-none mx-auto`}
+                      />
                     </div>
 
-                    <div className="flex flex-col gap-3">
-                      <div className="flex gap-2 w-full">
-                        <button
-                          onClick={() => {
-                            onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
-                            setPopupInfo(null);
-                          }}
-                          className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'found'
-                            ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
-                            : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'))
-                            }`}
-                        >
-                          {currentStatus === 'found' ? "✓ Found" : "Found"}
-                        </button>
+                    <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Redemptions</span>
+                        <span className="text-2xl font-bold text-gray-800">{numRedemptions.toLocaleString()}</span>
+                      </div>
+                      <div className={`px-4 py-1.5 rounded-full border text-sm font-bold shadow-sm ${usageColor}`}>
+                        {usageLabel}
+                      </div>
+                    </div>
 
-                        <button
-                          onClick={() => {
-                            onSetItemStatus(id, currentStatus === 'entered' ? null : 'entered');
-                            setPopupInfo(null);
-                          }}
-                          className={`flex-1 px-3 py-3 text-white rounded-lg text-sm font-bold transition-all shadow-sm ${currentStatus === 'entered'
-                            ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
-                            : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-800 hover:bg-amber-900'))
-                            }`}
-                        >
-                          {currentStatus === 'entered' ? "✓ Entered" : "Found & Entered"}
-                        </button>
+                    <div className="flex flex-col gap-5">
+                      <div className="flex flex-col gap-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-sm font-bold text-gray-700">Code (optional):</span>
+                          <input
+                            type="text"
+                            placeholder="Enter the code..."
+                            value={itemMetadata[id]?.code || ''}
+                            onChange={(e) => onSetItemMetadata(id, { ...(itemMetadata[id] || {}), code: e.target.value })}
+                            className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-sm font-bold text-gray-700">Notes (optional):</span>
+                          <textarea
+                            placeholder="Add generic notes here..."
+                            value={itemMetadata[id]?.notes || ''}
+                            onChange={(e) => onSetItemMetadata(id, { ...(itemMetadata[id] || {}), notes: e.target.value })}
+                            className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none min-h-[80px]"
+                          />
+                        </label>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
-                          setPopupInfo(null);
-                        }}
-                        className={`px-4 py-3 text-white rounded-lg text-base font-medium w-full transition-all shadow-sm ${currentStatus === 'not_found'
-                          ? 'bg-red-500 hover:bg-red-600 ring-2 ring-red-400 ring-offset-2'
-                          : 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
-                          }`}
-                      >
-                        {currentStatus === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
-                      </button>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex gap-3 w-full">
+                          <button
+                            onClick={() => {
+                              onSetItemStatus(id, currentStatus === 'found' ? null : 'found');
+                              setPopupInfo(null);
+                            }}
+                            className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${currentStatus === 'found'
+                              ? 'bg-gray-500 hover:bg-gray-600 ring-2 ring-gray-400 ring-offset-2'
+                              : (popupInfo.type === 'biz' ? 'bg-blue-600 hover:bg-blue-700' : (popupInfo.type === 'home' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'))
+                              }`}
+                          >
+                            {currentStatus === 'found' ? "✓ Found" : "Found"}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              onSetItemStatus(id, currentStatus === 'entered' ? null : 'entered');
+                              setPopupInfo(null);
+                            }}
+                            className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${currentStatus === 'entered'
+                              ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
+                              : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-700 hover:bg-amber-800'))
+                              }`}
+                          >
+                            {currentStatus === 'entered' ? "✓ Entered" : "Found & Entered"}
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            onSetItemStatus(id, currentStatus === 'not_found' ? null : 'not_found');
+                            setPopupInfo(null);
+                          }}
+                          className={`px-4 py-3.5 rounded-xl text-sm font-bold w-full transition-all shadow-sm ${currentStatus === 'not_found'
+                            ? 'bg-red-500 hover:bg-red-600 text-white ring-2 ring-red-400 ring-offset-2'
+                            : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
+                            }`}
+                        >
+                          {currentStatus === 'not_found' ? "✕ Not Found (Undo)" : "Mark as Not Found"}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                );
-              })()}
-            </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

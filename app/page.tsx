@@ -158,9 +158,12 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
         {/* Sidebar */}
         <aside className={`w-full md:w-[420px] bg-white border-r border-gray-200 flex-col shadow-2xl z-10 h-full ${viewMode === 'filters' ? 'flex' : 'hidden md:flex'}`}>
-        <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-md">
-          <h1 className="text-2xl font-extrabold tracking-tight">AADL Summer Game</h1>
-          <p className="text-blue-100 text-sm mt-1 font-medium opacity-90">Map Explorer & Tracker</p>
+        <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-md flex justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">Summer Game</h1>
+            <p className="text-blue-100 text-sm mt-1 font-medium opacity-90">Map Explorer & Tracker</p>
+          </div>
+          <div id="sync-btn-portal" className="shrink-0 flex items-center justify-center"></div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
