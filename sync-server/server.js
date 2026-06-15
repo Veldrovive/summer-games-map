@@ -55,6 +55,10 @@ wss.on('connection', (ws) => {
 
         // Broadcast updated user list
         broadcastUsers(shareCode);
+      } else if (data.type === 'update_nickname') {
+        if (!currentChannel) return;
+        ws.nickname = data.nickname || 'Anonymous';
+        broadcastUsers(currentChannel);
       } else if (data.type === 'update') {
         if (!currentChannel) return;
         const { event } = data; // event should have { type: 'status'|'metadata', id, status?, metadata?, updated_at }

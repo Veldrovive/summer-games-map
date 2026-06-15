@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useSync } from "../hooks/useSync";
 import { Users, WifiOff, X, Copy, Check } from "lucide-react";
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const { shareCode, nickname, activeUsers, isConnected, syncEntered, joinShare, leaveShare, toggleSyncEntered } = useSync();
+  const { shareCode, nickname, activeUsers, isConnected, syncEntered, joinShare, leaveShare, toggleSyncEntered, updateNickname } = useSync();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inputCode, setInputCode] = useState("");
   const [inputNick, setInputNick] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Sync inputNick with nickname from localStorage once it's loaded
+  useEffect(() => {
+    if (nickname && !inputNick) setInputNick(nickname);
+  }, [nickname]);
 
   const handleCreate = async () => {
     try {
@@ -41,7 +46,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       {/* Floating Share Button */}
       <button 
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-4 right-4 z-[9990] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2"
+        className="fixed bottom-4 left-4 md:left-[calc(420px+1rem)] z-[9990] bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2"
       >
         <Users className="w-5 h-5" />
         {shareCode ? <span className="font-bold pr-1">{shareCode}</span> : null}
@@ -60,6 +65,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             </div>
             
             <div className="p-6 space-y-6">
+              <div className="space-y-3">
+                <h3 className="font-bold text-gray-800 text-sm">Your Nickname</h3>
+                <input 
+                  type="text" 
+                  value={inputNick} 
+                  onChange={(e) => setInputNick(e.target.value)}
+                  onBlur={() => {
+                    const nickToUse = inputNick || "Anonymous";
+                    if (nickToUse !== nickname) {
+                      updateNickname(nickToUse);
+                    }
+                  }}
+                  placeholder={nickname || "Enter nickname"}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                  maxLength={20}
+                />
+              </div>
+
               {shareCode ? (
                 <div className="space-y-6">
                   <div className="text-center space-y-2">
@@ -113,18 +136,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="space-y-3">
-                    <h3 className="font-bold text-gray-800 text-sm">Your Nickname</h3>
-                    <input 
-                      type="text" 
-                      value={inputNick} 
-                      onChange={(e) => setInputNick(e.target.value)}
-                      placeholder={nickname || "Enter nickname"}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
-                      maxLength={20}
-                    />
-                  </div>
-
                   <div className="space-y-3">
                     <h3 className="font-bold text-gray-800 text-sm">Join an existing group</h3>
                     <div className="flex gap-2">

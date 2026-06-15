@@ -487,12 +487,6 @@ export default function Home() {
             <MapPin className="w-4 h-4" /> Map
           </button>
           <button 
-            onClick={() => setViewMode('list')} 
-            className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
-          >
-            <List className="w-4 h-4" /> List
-          </button>
-          <button 
             onClick={() => setViewMode('found')} 
             className={`flex-1 py-2.5 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-2 ${viewMode === 'found' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500'}`}
           >

@@ -145,6 +145,14 @@ export function useSync() {
     }
   };
 
+  const updateNickname = (nick: string) => {
+    setNickname(nick);
+    localStorage.setItem('aadl_nickname', nick);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'update_nickname', nickname: nick }));
+    }
+  };
+
   const leaveShare = () => {
     setShareCode(null);
     localStorage.removeItem('aadl_share_code');
@@ -166,6 +174,7 @@ export function useSync() {
     syncEntered,
     joinShare,
     leaveShare,
-    toggleSyncEntered
+    toggleSyncEntered,
+    updateNickname
   };
 }
