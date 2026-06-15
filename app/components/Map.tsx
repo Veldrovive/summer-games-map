@@ -144,7 +144,7 @@ export default function Map({
       if (seq !== undefined) {
         bgColor = '#3b82f6'; // blue-500
       } else if (isEntered) {
-        bgColor = '#1f2937'; // gray-800
+        bgColor = '#4b5563'; // gray-600
       } else if (status === 'found') {
         bgColor = '#9ca3af'; // gray-400
       } else if (status === 'not_found') {
@@ -172,7 +172,7 @@ export default function Map({
 
       let bgColor = '#10b981'; // emerald-500
       if (seq !== undefined) bgColor = '#3b82f6';
-      else if (isEntered) bgColor = '#1f2937';
+      else if (isEntered) bgColor = '#4b5563';
       else if (status === 'found') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
@@ -197,7 +197,7 @@ export default function Map({
 
       let bgColor = '#f59e0b'; // amber-500
       if (seq !== undefined) bgColor = '#3b82f6';
-      else if (isEntered) bgColor = '#1f2937';
+      else if (isEntered) bgColor = '#4b5563';
       else if (status === 'found') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
@@ -465,7 +465,7 @@ export default function Map({
                               setPopupInfo(null);
                             }}
                             className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${itemMetadata[id]?.entered
-                              ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
+                              ? 'bg-gray-600 hover:bg-gray-700 ring-2 ring-gray-500 ring-offset-2'
                               : (popupInfo.type === 'biz' ? 'bg-purple-800 hover:bg-purple-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-700 hover:bg-amber-800'))
                               }`}
                           >
