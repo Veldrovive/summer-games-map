@@ -361,7 +361,7 @@ export default function Home() {
               {filteredData.bizcodes.map(biz => {
                  const id = biz.code_id;
                  const status = itemStatuses[id];
-                 const isFoundOrEntered = status === 'found' || status === 'entered';
+                 const isFoundOrEntered = status === 'found';
                  const isNotFound = status === 'not_found';
                  return (
                    <div key={id} className={`p-5 rounded-2xl border transition-all flex flex-col ${isFoundOrEntered ? 'bg-gray-100 border-gray-200 opacity-70 scale-[0.98]' : (isNotFound ? 'bg-red-50 border-red-200 opacity-90 scale-[0.98]' : 'bg-white border-blue-100 shadow-md hover:shadow-lg')}`}>
@@ -399,22 +399,22 @@ export default function Home() {
                 const items: any[] = [];
                 data?.bizcodes.forEach(b => {
                   const status = itemStatuses[b.code_id];
-                  if (status === 'found' || status === 'entered') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', status });
+                  if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered });
                 });
                 data?.homecodes.forEach(h => {
                   const id = h.code_id || `home-${h.lat}-${h.lon}`;
                   const status = itemStatuses[id];
-                  if (status === 'found' || status === 'entered') items.push({ id, title: h.homecode, type: 'Home', status });
+                  if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered });
                 });
                 data?.badges.forEach(b => {
                   const id = `badge-${b.lat}-${b.lon}`;
                   const status = itemStatuses[id];
-                  if (status === 'found' || status === 'entered') items.push({ id, title: 'Badge', type: 'Badge', status });
+                  if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered });
                 });
                 
                 items.sort((a, b) => {
-                  if (a.status === 'found' && b.status === 'entered') return -1;
-                  if (a.status === 'entered' && b.status === 'found') return 1;
+                  if (!a.entered && b.entered) return -1;
+                  if (a.entered && !b.entered) return 1;
                   return 0;
                 });
 
@@ -423,13 +423,13 @@ export default function Home() {
                 }
 
                 return items.map(item => (
-                  <div key={item.id} className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col gap-3 ${item.status === 'entered' ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
+                  <div key={item.id} className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col gap-3 ${item.entered ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-blue-200 shadow-sm'}`}>
                     <div className="flex flex-col md:flex-row md:items-center gap-2 sm:gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
                         </div>
-                        <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.status === 'entered' ? 'line-through' : ''}`} />
+                        <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.entered ? 'line-through' : ''}`} />
                       </div>
                       
                       <div className="w-full md:w-auto md:min-w-[150px]">
@@ -452,8 +452,8 @@ export default function Home() {
                         <label className="flex items-center justify-center gap-2 cursor-pointer flex-1 md:flex-none bg-white px-2 sm:px-4 py-2.5 md:py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                           <input 
                             type="checkbox" 
-                            checked={item.status === 'entered'}
-                            onChange={(e) => setItemStatus(item.id, e.target.checked ? 'entered' : 'found')}
+                            checked={!!item.entered}
+                            onChange={(e) => setItemMetadata(item.id, { entered: e.target.checked })}
                             className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                           <span className="text-sm font-bold text-gray-700">Entered</span>

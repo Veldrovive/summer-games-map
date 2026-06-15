@@ -94,12 +94,23 @@ export function useSync() {
     if (!item_id) return; // Safely ignore events without a valid id
 
     if (type === 'status') {
-      if (status === 'entered' && !syncEntered) {
-        return; // User opted out of syncing 'entered' state
+      if (status === 'entered') {
+        // Backwards compatibility for older clients sending 'entered' status
+        setItemStatus(item_id, 'found', updated_at);
+        if (syncEntered) {
+          setItemMetadata(item_id, { entered: true }, updated_at);
+        }
+      } else {
+        setItemStatus(item_id, status, updated_at);
       }
-      setItemStatus(item_id, status, updated_at);
     } else if (type === 'metadata') {
-      setItemMetadata(item_id, metadata, updated_at);
+      const finalMetadata = { ...metadata };
+      if (!syncEntered && 'entered' in finalMetadata) {
+        delete finalMetadata.entered;
+      }
+      if (Object.keys(finalMetadata).length > 0) {
+        setItemMetadata(item_id, finalMetadata, updated_at);
+      }
     }
   }, [syncEntered, setItemStatus, setItemMetadata]);
 

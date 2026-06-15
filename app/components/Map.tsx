@@ -18,8 +18,8 @@ type MapProps = {
   badges: Badge[];
   itemStatuses: Record<string, ItemStatus>;
   onSetItemStatus: (id: string, status: ItemStatus | null) => void;
-  itemMetadata: Record<string, { notes?: string; code?: string }>;
-  onSetItemMetadata: (id: string, metadata: { notes?: string; code?: string }) => void;
+  itemMetadata: Record<string, { notes?: string; code?: string; entered?: boolean }>;
+  onSetItemMetadata: (id: string, metadata: { notes?: string; code?: string; entered?: boolean }) => void;
 
   // Routing props
   routeMode: boolean;
@@ -142,7 +142,7 @@ export default function Map({
       let bgColor = '#3b82f6';
       if (seq !== undefined) {
         bgColor = '#8b5cf6';
-      } else if (status === 'found' || status === 'entered') {
+      } else if (status === 'found') {
         bgColor = '#9ca3af';
       } else if (status === 'not_found') {
         bgColor = '#ef4444';
@@ -168,7 +168,7 @@ export default function Map({
 
       let bgColor = '#10b981';
       if (seq !== undefined) bgColor = '#8b5cf6';
-      else if (status === 'found' || status === 'entered') bgColor = '#9ca3af';
+      else if (status === 'found') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
       features.push({
@@ -191,7 +191,7 @@ export default function Map({
 
       let bgColor = '#f59e0b';
       if (seq !== undefined) bgColor = '#8b5cf6';
-      else if (status === 'found' || status === 'entered') bgColor = '#9ca3af';
+      else if (status === 'found') bgColor = '#9ca3af';
       else if (status === 'not_found') bgColor = '#ef4444';
 
       features.push({
@@ -429,15 +429,21 @@ export default function Map({
 
                           <button
                             onClick={() => {
-                              onSetItemStatus(id, currentStatus === 'entered' ? null : 'entered');
+                              const isEntered = itemMetadata[id]?.entered;
+                              if (isEntered) {
+                                onSetItemMetadata(id, { entered: false });
+                              } else {
+                                if (currentStatus !== 'found') onSetItemStatus(id, 'found');
+                                onSetItemMetadata(id, { entered: true });
+                              }
                               setPopupInfo(null);
                             }}
-                            className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${currentStatus === 'entered'
+                            className={`flex-1 px-4 py-3.5 text-white rounded-xl text-sm font-bold transition-all shadow-sm ${itemMetadata[id]?.entered
                               ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-gray-700 ring-offset-2'
                               : (popupInfo.type === 'biz' ? 'bg-blue-800 hover:bg-blue-900' : (popupInfo.type === 'home' ? 'bg-emerald-800 hover:bg-emerald-900' : 'bg-amber-700 hover:bg-amber-800'))
                               }`}
                           >
-                            {currentStatus === 'entered' ? "✓ Entered" : "Found & Entered"}
+                            {itemMetadata[id]?.entered ? "✓ Entered" : "Found & Entered"}
                           </button>
                         </div>
 

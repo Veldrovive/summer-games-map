@@ -8,7 +8,7 @@ import { ArrowLeft, Copy, CheckCircle2 } from "lucide-react";
 
 export default function EnterCodes() {
   const { data, loading } = useMapData();
-  const { itemStatuses, setItemStatus, itemMetadata } = useProgress();
+  const { itemStatuses, itemMetadata, setItemMetadata } = useProgress();
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -19,21 +19,21 @@ export default function EnterCodes() {
     
     data.bizcodes.forEach(b => {
       const status = itemStatuses[b.code_id];
-      if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business' });
+      if (status === 'found' && !itemMetadata[b.code_id]?.entered) items.push({ id: b.code_id, title: b.bizcode, type: 'Business' });
     });
     data.homecodes.forEach(h => {
       const id = h.code_id || `home-${h.lat}-${h.lon}`;
       const status = itemStatuses[id];
-      if (status === 'found') items.push({ id, title: h.homecode || 'Home Code', type: 'Home' });
+      if (status === 'found' && !itemMetadata[id]?.entered) items.push({ id, title: h.homecode || 'Home Code', type: 'Home' });
     });
     data.badges.forEach(b => {
       const id = `badge-${b.lat}-${b.lon}`;
       const status = itemStatuses[id];
-      if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge' });
+      if (status === 'found' && !itemMetadata[id]?.entered) items.push({ id, title: 'Badge', type: 'Badge' });
     });
     
     return items;
-  }, [data, itemStatuses]);
+  }, [data, itemStatuses, itemMetadata]);
 
   const handleCopy = async (id: string, codeToCopy: string) => {
     if (!codeToCopy) return;
@@ -108,7 +108,7 @@ export default function EnterCodes() {
                       <Copy className="w-4 h-4" /> {copiedId === item.id ? 'Copied!' : 'Copy'}
                     </button>
                     <button 
-                      onClick={() => setItemStatus(item.id, 'entered')}
+                      onClick={() => setItemMetadata(item.id, { entered: true })}
                       className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-sm transition-colors ring-2 ring-blue-600 ring-offset-1"
                     >
                       <CheckCircle2 className="w-4 h-4" /> Entered

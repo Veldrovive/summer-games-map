@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 
-export type ItemStatus = 'found' | 'not_found' | 'entered';
+export type ItemStatus = 'found' | 'not_found';
 
 export type ProgressItem = {
   status: ItemStatus;
   updated_at: number;
 };
 
-export type ItemMetadata = { notes?: string; code?: string, updated_at?: number };
+export type ItemMetadata = { notes?: string; code?: string, updated_at?: number, entered?: boolean };
 
 type ProgressContextType = {
   progressState: Record<string, ProgressItem>;
@@ -35,6 +35,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(storedV3);
         if (parsed["undefined"]) {
           delete parsed["undefined"];
+        }
+        
+        // Migrate 'entered' status to metadata
+        let needsSave = false;
+        for (const key of Object.keys(parsed)) {
+          if (parsed[key]?.status === 'entered') {
+            parsed[key].status = 'found';
+            needsSave = true;
+            setTimeout(() => setItemMetadata(key, { entered: true }, parsed[key].updated_at), 0);
+          }
+        }
+        
+        if (parsed["undefined"] || needsSave) {
           localStorage.setItem('aadl_progress_v3', JSON.stringify(parsed));
         }
         setProgressState(parsed);
@@ -145,7 +158,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       let newStatus: ItemStatus | null = null;
       const now = Date.now();
       
-      if (current === 'found' || current === 'entered') {
+      if (current === 'found') {
         newStatus = null;
         delete next[id];
       } else {
@@ -220,9 +233,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         for (const [id, item] of Object.entries(data.progress || {})) {
           const prevItem = prev[id];
           if (!prevItem || prevItem.updated_at < item.updated_at) {
-            next[id] = item;
+            let itemStatus = item.status;
+            if (itemStatus === 'entered' as any) {
+              itemStatus = 'found';
+              setTimeout(() => setItemMetadata(id, { entered: true }, item.updated_at), 0);
+            }
+            next[id] = { ...item, status: itemStatus };
             hasChanges = true;
-            queue.push({ type: 'status', id, status: item.status, updated_at: item.updated_at });
+            queue.push({ type: 'status', id, status: itemStatus, updated_at: item.updated_at });
           }
         }
 
@@ -275,7 +293,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     itemStatuses[key] = val.status;
   }
 
-  const checkedItems = new Set(Object.keys(progressState).filter(k => progressState[k]?.status === 'found' || progressState[k]?.status === 'entered'));
+  const checkedItems = new Set(Object.keys(progressState).filter(k => progressState[k]?.status === 'found'));
 
   return (
     <ProgressContext.Provider value={{ progressState, itemStatuses, setItemStatus, toggleItem, checkedItems, itemMetadata, setItemMetadata, restoreBackup }}>
