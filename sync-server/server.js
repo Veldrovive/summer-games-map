@@ -18,15 +18,29 @@ const channels = new Map();
 wss.on('connection', (ws) => {
   let currentChannel = null;
 
+  const broadcastUsers = (shareCode) => {
+    const channelClients = channels.get(shareCode);
+    if (!channelClients) return;
+    const users = Array.from(channelClients).map(client => client.nickname).filter(Boolean);
+    const msg = JSON.stringify({ type: 'users', users });
+    for (const client of channelClients) {
+      if (client.readyState === 1) {
+        client.send(msg);
+      }
+    }
+  };
+
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message);
       
       if (data.type === 'join') {
-        const { shareCode } = data;
+        const { shareCode, nickname } = data;
         if (!shareCode) return;
         
         currentChannel = shareCode;
+        ws.nickname = nickname || 'Anonymous';
+
         if (!channels.has(shareCode)) {
           channels.set(shareCode, new Set());
         }
@@ -38,6 +52,9 @@ wss.on('connection', (ws) => {
         // Send all past events to the new client
         const events = await getShareEvents(shareCode);
         ws.send(JSON.stringify({ type: 'sync', events }));
+
+        // Broadcast updated user list
+        broadcastUsers(shareCode);
       } else if (data.type === 'update') {
         if (!currentChannel) return;
         const { event } = data; // event should have { type: 'status'|'metadata', id, status?, metadata?, updated_at }
@@ -48,7 +65,7 @@ wss.on('connection', (ws) => {
         // Broadcast to others in the channel
         const channelClients = channels.get(currentChannel);
         if (channelClients) {
-          const msg = JSON.stringify({ type: 'update', event });
+          const msg = JSON.stringify({ type: 'update', nickname: ws.nickname, event });
           for (const client of channelClients) {
             if (client !== ws && client.readyState === 1 /* OPEN */) {
               client.send(msg);
@@ -66,6 +83,8 @@ wss.on('connection', (ws) => {
       channels.get(currentChannel).delete(ws);
       if (channels.get(currentChannel).size === 0) {
         channels.delete(currentChannel);
+      } else {
+        broadcastUsers(currentChannel);
       }
     }
   });

@@ -5,16 +5,18 @@ import { useSync } from "../hooks/useSync";
 import { Users, WifiOff, X, Copy, Check } from "lucide-react";
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const { shareCode, isConnected, syncEntered, joinShare, leaveShare, toggleSyncEntered } = useSync();
+  const { shareCode, nickname, activeUsers, isConnected, syncEntered, joinShare, leaveShare, toggleSyncEntered } = useSync();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inputCode, setInputCode] = useState("");
+  const [inputNick, setInputNick] = useState("");
   const [copied, setCopied] = useState(false);
 
   const handleCreate = async () => {
     try {
+      const nickToUse = inputNick || nickname || "Anonymous";
       // In a real app we'd call the API to generate, but we can also just generate client side and join
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      joinShare(code);
+      joinShare(code, nickToUse);
     } catch (e) {
       console.error(e);
     }
@@ -86,6 +88,22 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                     </div>
                   </label>
 
+                  {activeUsers.length > 0 && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-600" /> Active Users
+                      </h3>
+                      <ul className="space-y-2">
+                        {activeUsers.map((u, i) => (
+                          <li key={i} className="text-sm font-medium text-gray-700 flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span> 
+                            {u} {u === nickname ? <span className="text-xs text-gray-400 font-bold ml-1">(You)</span> : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <button 
                     onClick={leaveShare}
                     className="w-full py-3 font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors text-sm"
@@ -95,6 +113,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  <div className="space-y-3">
+                    <h3 className="font-bold text-gray-800 text-sm">Your Nickname</h3>
+                    <input 
+                      type="text" 
+                      value={inputNick} 
+                      onChange={(e) => setInputNick(e.target.value)}
+                      placeholder={nickname || "Enter nickname"}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                      maxLength={20}
+                    />
+                  </div>
+
                   <div className="space-y-3">
                     <h3 className="font-bold text-gray-800 text-sm">Join an existing group</h3>
                     <div className="flex gap-2">
@@ -108,7 +138,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                       />
                       <button 
                         onClick={() => {
-                          if (inputCode.length > 0) joinShare(inputCode);
+                          const nickToUse = inputNick || nickname || "Anonymous";
+                          if (inputCode.length > 0) joinShare(inputCode, nickToUse);
                         }}
                         disabled={inputCode.length === 0}
                         className="px-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"

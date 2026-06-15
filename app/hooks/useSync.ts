@@ -4,6 +4,8 @@ import { useProgress } from './useProgress';
 export function useSync() {
   const { setItemStatus, setItemMetadata } = useProgress();
   const [shareCode, setShareCode] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string>('');
+  const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [syncEntered, setSyncEntered] = useState(true);
   const wsRef = useRef<WebSocket | null>(null);
@@ -15,6 +17,8 @@ export function useSync() {
     // Load saved preferences
     const savedCode = localStorage.getItem('aadl_share_code');
     if (savedCode) setShareCode(savedCode);
+    const savedNickname = localStorage.getItem('aadl_nickname');
+    if (savedNickname) setNickname(savedNickname);
     const savedSyncEntered = localStorage.getItem('aadl_sync_entered');
     if (savedSyncEntered !== null) setSyncEntered(savedSyncEntered === 'true');
   }, []);
@@ -37,7 +41,7 @@ export function useSync() {
 
     ws.onopen = () => {
       setIsConnected(true);
-      ws.send(JSON.stringify({ type: 'join', shareCode }));
+      ws.send(JSON.stringify({ type: 'join', shareCode, nickname }));
       
       // Flush offline queue
       const queue = JSON.parse(localStorage.getItem('aadl_offline_queue') || '[]');
@@ -60,6 +64,9 @@ export function useSync() {
         } else if (data.type === 'update') {
           // Single update
           applyRemoteEvent(data.event);
+        } else if (data.type === 'users') {
+          // Update active users
+          setActiveUsers(data.users || []);
         }
       } catch (e) {
         console.error('Failed to parse WS message', e);
@@ -78,7 +85,7 @@ export function useSync() {
       console.error('WS Error:', err);
     };
 
-  }, [shareCode, syncEntered, setItemStatus, setItemMetadata]);
+  }, [shareCode, nickname, syncEntered, setItemStatus, setItemMetadata]);
 
   const applyRemoteEvent = useCallback((event: any) => {
     const { type, item_id, status, metadata, updated_at } = event;
@@ -128,10 +135,14 @@ export function useSync() {
     };
   }, [shareCode]);
 
-  const joinShare = (code: string) => {
+  const joinShare = (code: string, nick?: string) => {
     const upperCode = code.toUpperCase();
     setShareCode(upperCode);
     localStorage.setItem('aadl_share_code', upperCode);
+    if (nick) {
+      setNickname(nick);
+      localStorage.setItem('aadl_nickname', nick);
+    }
   };
 
   const leaveShare = () => {
@@ -149,6 +160,8 @@ export function useSync() {
 
   return {
     shareCode,
+    nickname,
+    activeUsers,
     isConnected,
     syncEntered,
     joinShare,
