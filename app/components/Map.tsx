@@ -384,15 +384,34 @@ export default function Map({
                       />
                     </div>
 
-                    {popupInfo.type !== 'badge' && (
-                      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Redemptions</span>
-                          <span className="text-2xl font-bold text-gray-800">{numRedemptions.toLocaleString()}</span>
-                        </div>
-                        <div className={`px-4 py-1.5 rounded-full border text-sm font-bold shadow-sm ${usageColor}`}>
-                          {usageLabel}
-                        </div>
+                    {(popupInfo.type !== 'badge' || popupInfo.created) && (
+                      <div className="bg-gray-50 rounded-xl p-1 mb-6 border border-gray-100 flex flex-col">
+                        {popupInfo.type !== 'badge' && (
+                          <div className="flex items-center justify-between py-3 px-4 border-b border-gray-200 last:border-0">
+                            <div className="flex items-center gap-6">
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Redemptions</span>
+                              <span className="text-lg font-bold text-gray-800">{numRedemptions.toLocaleString()}</span>
+                            </div>
+                            <div className={`px-3 py-1.5 rounded-full border text-xs font-bold shadow-sm whitespace-nowrap ${usageColor}`}>
+                              {usageLabel}
+                            </div>
+                          </div>
+                        )}
+                        {popupInfo.created && (
+                          <div className="flex items-center justify-between py-3 px-4 border-b border-gray-200 last:border-0">
+                            <div className="flex items-center gap-6">
+                              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Created</span>
+                              <span className="text-lg font-bold text-gray-800">
+                                {(() => {
+                                  const d = new Date(Number(popupInfo.created) * 1000);
+                                  const day = d.getDate();
+                                  const suffix = ['th', 'st', 'nd', 'rd'][(day > 3 && day < 21) || day % 10 > 3 ? 0 : day % 10];
+                                  return `${d.toLocaleDateString('en-US', { month: 'long' })} ${day}${suffix}`;
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
