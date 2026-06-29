@@ -161,18 +161,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                     <p className="text-xs text-gray-400 font-medium">Status: {isConnected ? <span className="text-green-500">Connected</span> : <span className="text-red-500">Offline</span>}</p>
                   </div>
                   
-                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={syncEntered} 
-                      onChange={(e) => toggleSyncEntered(e.target.checked)}
-                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-800 text-sm">Sync "Entered" Status</div>
-                      <div className="text-xs text-gray-500 font-medium leading-snug mt-0.5">If disabled, you won't receive other people's entered status, keeping your own tracker clean.</div>
-                    </div>
-                  </label>
 
                   {activeUsers.length > 0 && (
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -209,6 +197,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                         placeholder="e.g. ABCDEF"
                         className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-mono font-bold text-lg"
                         maxLength={6}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
                       />
                       <button 
                         onClick={() => {

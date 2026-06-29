@@ -425,6 +425,10 @@ export default function Map({
                             value={itemMetadata[id]?.code || ''}
                             onChange={(e) => onSetItemMetadata(id, { ...(itemMetadata[id] || {}), code: e.target.value })}
                             className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="none"
+                            spellCheck={false}
                           />
                         </label>
                         <label className="flex flex-col gap-1.5">

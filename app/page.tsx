@@ -487,6 +487,10 @@ export default function Home() {
                             value={itemMetadata[item.id]?.code || ''}
                             onChange={(e) => setItemMetadata(item.id, { code: e.target.value })}
                             className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="none"
+                            spellCheck={false}
                           />
                         </div>
 

@@ -7,7 +7,7 @@ export function useSync() {
   const [nickname, setNickname] = useState<string>('');
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [syncEntered, setSyncEntered] = useState(true);
+  const [syncEntered, setSyncEntered] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   
   // Reconnect logic
