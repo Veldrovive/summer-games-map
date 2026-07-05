@@ -6,7 +6,7 @@ import { useMapData } from "./hooks/useMapData";
 import { useProgress } from "./hooks/useProgress";
 import { calculateDistance } from "./lib/distance";
 import { geocodeAddress } from "./lib/geocoding";
-import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound, HelpCircle, Bug } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound, HelpCircle, Bug, Copy, ExternalLink, Check } from "lucide-react";
 import { useRouting } from "./hooks/useRouting";
 import Link from "next/link";
 import { Tutorial } from "./components/Tutorial";
@@ -31,6 +31,7 @@ export default function Home() {
   const [radius, setRadius] = useState<number>(100000); // Default 100000 miles
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [liveLocation, setLiveLocation] = useState<{ lat: number, lon: number } | null>(null);
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && "geolocation" in navigator) {
@@ -480,18 +481,45 @@ export default function Home() {
                           <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.entered ? 'line-through' : ''}`} />
                         </div>
 
-                        <div className="w-full md:w-auto md:min-w-[150px]">
+                        <div className="w-full md:w-auto md:min-w-[150px] relative">
                           <input
                             type="text"
                             placeholder="Code..."
                             value={itemMetadata[item.id]?.code || ''}
                             onChange={(e) => setItemMetadata(item.id, { code: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full pl-2 pr-14 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
                             autoComplete="off"
                             autoCorrect="off"
                             autoCapitalize="none"
                             spellCheck={false}
                           />
+                          {itemMetadata[item.id]?.code && (
+                            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  const code = itemMetadata[item.id]?.code;
+                                  if (code) {
+                                    navigator.clipboard.writeText(code);
+                                    setCopiedItemId(item.id);
+                                    setTimeout(() => setCopiedItemId(null), 2000);
+                                  }
+                                }}
+                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors bg-white rounded"
+                                title="Copy Code"
+                              >
+                                {copiedItemId === item.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                              </button>
+                              <a
+                                href={`https://aadl.org/summergame/player/0/gamecode?text=${itemMetadata[item.id]?.code || ''}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors bg-white rounded"
+                                title="Enter Code"
+                              >
+                                <ExternalLink size={14} />
+                              </a>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
