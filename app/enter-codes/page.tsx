@@ -14,9 +14,9 @@ export default function EnterCodes() {
 
   const itemsToEnter = useMemo(() => {
     if (!data) return [];
-    
+
     const items: any[] = [];
-    
+
     data.bizcodes.forEach(b => {
       const status = itemStatuses[b.code_id];
       if (status === 'found' && !itemMetadata[b.code_id]?.entered) items.push({ id: b.code_id, title: b.bizcode, type: 'Business' });
@@ -31,7 +31,14 @@ export default function EnterCodes() {
       const status = itemStatuses[id];
       if (status === 'found' && !itemMetadata[id]?.entered) items.push({ id, title: 'Badge', type: 'Badge' });
     });
-    
+
+    // Add Extra Codes
+    Object.keys(itemStatuses).forEach(id => {
+      if (id.startsWith('extra-') && itemStatuses[id] === 'found' && !itemMetadata[id]?.entered) {
+        items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra' });
+      }
+    });
+
     return items;
   }, [data, itemStatuses, itemMetadata]);
 
@@ -77,7 +84,7 @@ export default function EnterCodes() {
           <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar p-5 gap-4 items-center min-h-[220px]">
             {itemsToEnter.map((item) => {
               const codeToCopy = itemMetadata[item.id]?.code || '';
-              
+
               return (
                 <div key={item.id} className="snap-center shrink-0 w-[280px] bg-white rounded-2xl p-5 shadow-lg border border-gray-200 flex flex-col gap-4 transform transition-transform hover:scale-[1.02]">
                   <div>
@@ -86,7 +93,7 @@ export default function EnterCodes() {
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: item.title }} className="text-sm font-bold text-gray-800 line-clamp-2 leading-snug" />
                   </div>
-                  
+
                   <div className="flex-1 flex flex-col justify-center">
                     {codeToCopy ? (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 font-mono text-center text-lg text-gray-900 tracking-widest font-bold shadow-inner">
@@ -100,14 +107,14 @@ export default function EnterCodes() {
                   </div>
 
                   <div className="flex gap-2 mt-auto pt-2">
-                    <button 
+                    <button
                       onClick={() => handleCopy(item.id, codeToCopy)}
                       disabled={!codeToCopy}
                       className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:hover:bg-gray-100 text-gray-800 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm"
                     >
                       <Copy className="w-4 h-4" /> {copiedId === item.id ? 'Copied!' : 'Copy'}
                     </button>
-                    <button 
+                    <button
                       onClick={() => setItemMetadata(item.id, { entered: true })}
                       className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-sm transition-colors ring-2 ring-blue-600 ring-offset-1"
                     >
@@ -117,7 +124,7 @@ export default function EnterCodes() {
                 </div>
               );
             })}
-            
+
             {/* Spacer to allow the last item to snap to center nicely */}
             <div className="shrink-0 w-8 h-1"></div>
           </div>
@@ -126,7 +133,7 @@ export default function EnterCodes() {
 
       {/* Bottom Section: iframe */}
       <div className="flex-1 bg-white relative">
-        <iframe 
+        <iframe
           src="https://aadl.org/summergame/player/54029/gamecode"
           className="absolute inset-0 w-full h-full border-0"
           title="AADL Summer Game Player"
@@ -134,7 +141,8 @@ export default function EnterCodes() {
       </div>
 
       {/* Scoped styles for hiding scrollbar but allowing scroll */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }

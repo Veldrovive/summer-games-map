@@ -65,6 +65,24 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<"map" | "list" | "filters" | "found">("map");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  // Extra codes and Found Codes Filters
+  const [newExtraName, setNewExtraName] = useState("");
+  const [newExtraCode, setNewExtraCode] = useState("");
+  const [foundFilterEntered, setFoundFilterEntered] = useState<"all" | "entered" | "not_entered">("all");
+  const [foundFilterTypes, setFoundFilterTypes] = useState({ business: true, home: true, badge: true, extra: true });
+  const [showExtraCodeModal, setShowExtraCodeModal] = useState(false);
+  const [isFoundFiltersOpen, setIsFoundFiltersOpen] = useState(false);
+
+  const handleAddExtraCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExtraName.trim()) return;
+    const id = `extra-${Date.now()}`;
+    setItemStatus(id, 'found');
+    setItemMetadata(id, { name: newExtraName.trim(), code: newExtraCode.trim() });
+    setNewExtraName("");
+    setNewExtraCode("");
+  };
+
   useEffect(() => {
     const handleTourStep = (e: any) => {
       const target = e.detail?.target;
@@ -440,12 +458,76 @@ export default function Home() {
 
           {viewMode === 'found' && (
             <div className="h-full overflow-y-auto p-6 lg:p-10 bg-gray-50">
-              <h2 className="text-2xl font-extrabold mb-6 text-gray-800 tracking-tight">Found Codes ({checkedItems.size})</h2>
-              <p className="text-gray-500 font-medium mb-8">Codes you've found. Check them off once you've entered them on the Summer Game site.</p>
+              <h2 className="text-2xl font-extrabold mb-2 text-gray-800 tracking-tight">Found Codes ({checkedItems.size})</h2>
+              <p className="text-gray-500 font-medium mb-6">Codes you've found. Check them off once you've entered them on the Summer Game site.</p>
+
+              <div className="flex flex-col gap-4 max-w-3xl mb-6">
+                {/* Accordion Filters */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <button 
+                    onClick={() => setIsFoundFiltersOpen(!isFoundFiltersOpen)} 
+                    className="w-full px-5 py-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <span className="font-bold text-gray-700 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4"/> Filters</span>
+                    <span className="text-gray-400 font-bold">{isFoundFiltersOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {isFoundFiltersOpen && (
+                    <div className="p-5 border-t border-gray-200 flex flex-col gap-6">
+                      {/* Statuses */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Status</h3>
+                        <div className="flex flex-wrap gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" checked={foundFilterEntered === 'all'} onChange={() => setFoundFilterEntered('all')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">All Statuses</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" checked={foundFilterEntered === 'entered'} onChange={() => setFoundFilterEntered('entered')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">Entered</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" checked={foundFilterEntered === 'not_entered'} onChange={() => setFoundFilterEntered('not_entered')} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">Not Entered</span>
+                          </label>
+                        </div>
+                      </div>
+                      {/* Types */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Code Types</h3>
+                        <div className="flex flex-wrap gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={foundFilterTypes.business} onChange={e => setFoundFilterTypes(prev => ({...prev, business: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">Business Codes</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={foundFilterTypes.home} onChange={e => setFoundFilterTypes(prev => ({...prev, home: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">Lawn Codes</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={foundFilterTypes.badge} onChange={e => setFoundFilterTypes(prev => ({...prev, badge: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">Badge Codes</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={foundFilterTypes.extra} onChange={e => setFoundFilterTypes(prev => ({...prev, extra: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <span className="text-sm font-semibold text-gray-700">Extra Codes</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button onClick={() => setShowExtraCodeModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors shadow-sm whitespace-nowrap">
+                    + Add Extra Code
+                  </button>
+                </div>
+              </div>
 
               <div className="flex flex-col gap-4 max-w-3xl">
                 {(() => {
-                  const items: any[] = [];
+                  let items: any[] = [];
                   data?.bizcodes.forEach(b => {
                     const status = itemStatuses[b.code_id];
                     if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered });
@@ -459,6 +541,26 @@ export default function Home() {
                     const id = `badge-${b.lat}-${b.lon}`;
                     const status = itemStatuses[id];
                     if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered });
+                  });
+
+                  // Add Extra Codes
+                  Object.keys(itemStatuses).forEach(id => {
+                    if (id.startsWith('extra-') && itemStatuses[id] === 'found') {
+                       items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered });
+                    }
+                  });
+
+                  // Apply filters
+                  items = items.filter(item => {
+                    if (foundFilterEntered === 'entered' && !item.entered) return false;
+                    if (foundFilterEntered === 'not_entered' && item.entered) return false;
+                    
+                    if (item.type === 'Home' && !foundFilterTypes.home) return false;
+                    if (item.type === 'Badge' && !foundFilterTypes.badge) return false;
+                    if (item.type === 'Business' && !foundFilterTypes.business) return false;
+                    if (item.type === 'Extra' && !foundFilterTypes.extra) return false;
+                    
+                    return true;
                   });
 
                   items.sort((a, b) => {
@@ -477,6 +579,9 @@ export default function Home() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.type}</span>
+                            {item.type === 'Extra' && (
+                              <button onClick={() => setItemStatus(item.id, null)} className="text-[10px] font-bold uppercase tracking-wider text-red-500 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-full transition-colors ml-auto md:ml-0">Delete</button>
+                            )}
                           </div>
                           <div dangerouslySetInnerHTML={{ __html: item.title }} className={`text-sm font-bold text-gray-800 ${item.entered ? 'line-through' : ''}`} />
                         </div>
@@ -621,6 +726,44 @@ export default function Home() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extra Code Modal */}
+      {showExtraCodeModal && (
+        <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b bg-gray-50 shrink-0">
+              <h3 className="font-extrabold text-xl text-gray-800 flex items-center gap-2">
+                Add Extra Code
+              </h3>
+              <button
+                onClick={() => setShowExtraCodeModal(false)}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              handleAddExtraCode(e);
+              setShowExtraCodeModal(false);
+            }} className="p-6">
+              <p className="text-gray-600 text-sm mb-4 font-medium">Some codes are not on the map. You can log them here.</p>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Name</label>
+                  <input type="text" placeholder="e.g. Park Bonus Code" value={newExtraName} onChange={e => setNewExtraName(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Code (optional)</label>
+                  <input type="text" placeholder="e.g. SUMMER123" value={newExtraCode} onChange={e => setNewExtraCode(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+                <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-center transition-colors shadow-sm mt-2">
+                  Save Extra Code
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

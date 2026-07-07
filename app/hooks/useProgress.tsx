@@ -9,7 +9,7 @@ export type ProgressItem = {
   updated_at: number;
 };
 
-export type ItemMetadata = { notes?: string; code?: string, updated_at?: number, entered?: boolean };
+export type ItemMetadata = { notes?: string; code?: string; updated_at?: number; entered?: boolean; name?: string };
 
 type ProgressContextType = {
   progressState: Record<string, ProgressItem>;
