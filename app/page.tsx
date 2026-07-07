@@ -11,6 +11,7 @@ import { useRouting } from "./hooks/useRouting";
 import Link from "next/link";
 import { Tutorial } from "./components/Tutorial";
 import Fuse from "fuse.js";
+import { AutoSubmitModal } from "./components/AutoSubmitModal";
 
 // Dynamically import map to avoid SSR issues
 const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-100 font-medium text-gray-500">Loading Map...</div> });
@@ -74,6 +75,7 @@ export default function Home() {
   const [showExtraCodeModal, setShowExtraCodeModal] = useState(false);
   const [isFoundFiltersOpen, setIsFoundFiltersOpen] = useState(false);
   const [foundSearchQuery, setFoundSearchQuery] = useState("");
+  const [showAutoSubmitModal, setShowAutoSubmitModal] = useState(false);
 
   const handleAddExtraCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +172,66 @@ export default function Home() {
     };
   }, [data, center, radius, showBiz, showHome, showBadges, hideChecked, checkedItems]);
 
+  const filteredFoundItems = useMemo(() => {
+    let items: any[] = [];
+    data?.bizcodes.forEach(b => {
+      const status = itemStatuses[b.code_id];
+      if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered, code: itemMetadata[b.code_id]?.code, notes: itemMetadata[b.code_id]?.notes });
+    });
+    data?.homecodes.forEach(h => {
+      const id = h.code_id || `home-${h.lat}-${h.lon}`;
+      const status = itemStatuses[id];
+      if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
+    });
+    data?.badges.forEach(b => {
+      const id = `badge-${b.lat}-${b.lon}`;
+      const status = itemStatuses[id];
+      if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
+    });
+
+    // Add Extra Codes
+    Object.keys(itemStatuses).forEach(id => {
+      if (id.startsWith('extra-') && itemStatuses[id] === 'found') {
+          items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
+      }
+    });
+
+    // Apply filters
+    items = items.filter(item => {
+      if (foundFilterEntered === 'entered' && !item.entered) return false;
+      if (foundFilterEntered === 'not_entered' && item.entered) return false;
+      
+      if (item.type === 'Home' && !foundFilterTypes.home) return false;
+      if (item.type === 'Badge' && !foundFilterTypes.badge) return false;
+      if (item.type === 'Business' && !foundFilterTypes.business) return false;
+      if (item.type === 'Extra' && !foundFilterTypes.extra) return false;
+      
+      return true;
+    });
+
+    if (foundSearchQuery.trim() !== '') {
+      const fuse = new Fuse(items, {
+        keys: ['title', 'code', 'notes'],
+        threshold: 0.4,
+      });
+      items = fuse.search(foundSearchQuery).map(result => result.item);
+    }
+
+    items.sort((a, b) => {
+      if (!a.entered && b.entered) return -1;
+      if (a.entered && !b.entered) return 1;
+      return 0;
+    });
+
+    return items;
+  }, [data, itemStatuses, itemMetadata, foundFilterEntered, foundFilterTypes, foundSearchQuery]);
+
+  const autoSubmitCodes = useMemo(() => {
+    return filteredFoundItems
+      .filter(item => !item.entered && item.code && item.code.trim() !== '')
+      .map(item => ({ id: item.id, code: item.code.trim(), title: item.title }));
+  }, [filteredFoundItems]);
+
   const totalVisible = filteredData.bizcodes.length + filteredData.homecodes.length + filteredData.badges.length;
 
   const handlePlanAllVisible = () => {
@@ -208,6 +270,16 @@ export default function Home() {
   return (
     <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
       <Tutorial />
+      <AutoSubmitModal 
+        isOpen={showAutoSubmitModal} 
+        onClose={() => setShowAutoSubmitModal(false)} 
+        codes={autoSubmitCodes} 
+        onCodeProcessed={(id, result) => {
+          if (result === 'success' || result === 'already_redeemed') {
+            setItemMetadata(id, { entered: true });
+          }
+        }}
+      />
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
         {/* Sidebar */}
@@ -536,6 +608,9 @@ export default function Home() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3">
+                  <button onClick={() => setShowAutoSubmitModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors shadow-sm whitespace-nowrap">
+                    Auto Submit Codes
+                  </button>
                   <button onClick={() => setShowExtraCodeModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors shadow-sm whitespace-nowrap">
                     + Add Extra Code
                   </button>
@@ -544,55 +619,7 @@ export default function Home() {
 
               <div className="flex flex-col gap-4 max-w-3xl">
                 {(() => {
-                  let items: any[] = [];
-                  data?.bizcodes.forEach(b => {
-                    const status = itemStatuses[b.code_id];
-                    if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered, code: itemMetadata[b.code_id]?.code, notes: itemMetadata[b.code_id]?.notes });
-                  });
-                  data?.homecodes.forEach(h => {
-                    const id = h.code_id || `home-${h.lat}-${h.lon}`;
-                    const status = itemStatuses[id];
-                    if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
-                  });
-                  data?.badges.forEach(b => {
-                    const id = `badge-${b.lat}-${b.lon}`;
-                    const status = itemStatuses[id];
-                    if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
-                  });
-
-                  // Add Extra Codes
-                  Object.keys(itemStatuses).forEach(id => {
-                    if (id.startsWith('extra-') && itemStatuses[id] === 'found') {
-                       items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
-                    }
-                  });
-
-                  // Apply filters
-                  items = items.filter(item => {
-                    if (foundFilterEntered === 'entered' && !item.entered) return false;
-                    if (foundFilterEntered === 'not_entered' && item.entered) return false;
-                    
-                    if (item.type === 'Home' && !foundFilterTypes.home) return false;
-                    if (item.type === 'Badge' && !foundFilterTypes.badge) return false;
-                    if (item.type === 'Business' && !foundFilterTypes.business) return false;
-                    if (item.type === 'Extra' && !foundFilterTypes.extra) return false;
-                    
-                    return true;
-                  });
-
-                  if (foundSearchQuery.trim() !== '') {
-                    const fuse = new Fuse(items, {
-                      keys: ['title', 'code', 'notes'],
-                      threshold: 0.4,
-                    });
-                    items = fuse.search(foundSearchQuery).map(result => result.item);
-                  }
-
-                  items.sort((a, b) => {
-                    if (!a.entered && b.entered) return -1;
-                    if (a.entered && !b.entered) return 1;
-                    return 0;
-                  });
+                  const items = filteredFoundItems;
 
                   if (items.length === 0) {
                     return <div className="text-gray-500 bg-white p-6 rounded-xl border border-gray-200">You haven't found any codes yet.</div>;

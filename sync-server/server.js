@@ -105,6 +105,142 @@ wss.on('connection', (ws) => {
             }
           }
         }
+      } else if (data.type === 'auto_submit_validate') {
+        try {
+          const { cookieName, cookieValue } = data;
+          const res = await fetch('https://aadl.org/summergame/player/0/gamecode', {
+            headers: {
+              'Cookie': `${cookieName}=${cookieValue}`
+            }
+          });
+          const html = await res.text();
+          
+          if (html.includes('{"command":"message","message":"You must be logged in')) {
+            ws.send(JSON.stringify({ type: 'auto_submit_validate_result', success: false, error: 'You must be logged in' }));
+            return;
+          }
+
+          // Parse playerId
+          const actionMatch = html.match(/action="\/summergame\/player\/(\d+)\/gamecode"/);
+          if (!actionMatch) {
+            ws.send(JSON.stringify({ type: 'auto_submit_validate_result', success: false, error: 'Could not find player ID on page.' }));
+            return;
+          }
+          const playerId = actionMatch[1];
+          ws.send(JSON.stringify({ type: 'auto_submit_validate_result', success: true, playerId }));
+        } catch (e) {
+          ws.send(JSON.stringify({ type: 'auto_submit_validate_result', success: false, error: e.message }));
+        }
+      } else if (data.type === 'auto_submit_start') {
+        const { cookieName, cookieValue, codes, playerId } = data;
+        ws.autoSubmitCancel = false;
+
+        try {
+          // Get the initial form tokens
+          const initRes = await fetch(`https://aadl.org/summergame/player/${playerId}/gamecode`, {
+            headers: { 'Cookie': `${cookieName}=${cookieValue}` }
+          });
+          let html = await initRes.text();
+
+          let pointsGained = 0;
+          let successful = 0;
+
+          for (let i = 0; i < codes.length; i++) {
+            if (ws.autoSubmitCancel) {
+              ws.send(JSON.stringify({ type: 'auto_submit_complete', reason: 'cancelled' }));
+              break;
+            }
+
+            const codeItem = codes[i];
+            
+            const formBuildIdMatch = html.match(/name="form_build_id" value="([^"]+)"/);
+            const formTokenMatch = html.match(/name="form_token" value="([^"]+)"/);
+
+            if (!formBuildIdMatch || !formTokenMatch) {
+              ws.send(JSON.stringify({ 
+                type: 'auto_submit_progress', 
+                id: codeItem.id, 
+                code: codeItem.code, 
+                result: 'error', 
+                message: 'Failed to extract form tokens from page.' 
+              }));
+              continue;
+            }
+
+            const formBuildId = formBuildIdMatch[1];
+            const formToken = formTokenMatch[1];
+
+            const formData = new FormData();
+            formData.append('code_text', codeItem.code);
+            formData.append('op', 'Submit');
+            formData.append('form_id', 'summergame_player_redeem_form');
+            formData.append('form_build_id', formBuildId);
+            formData.append('form_token', formToken);
+
+            const postRes = await fetch(`https://aadl.org/summergame/player/${playerId}/gamecode`, {
+              method: 'POST',
+              headers: {
+                'Cookie': `${cookieName}=${cookieValue}`
+              },
+              body: formData
+            });
+
+            html = await postRes.text();
+
+            // Check response message
+            let result = 'error';
+            let messageStr = '';
+            let points = 0;
+
+            const msgMatch = html.match(/{"command":"message","message":"(.*?)"/);
+            if (msgMatch) {
+              // Decode unicode escapes like \u0022 -> "
+              messageStr = msgMatch[1].replace(/\\u([\dA-Fa-f]{4})/gi, (match, grp) => {
+                return String.fromCharCode(parseInt(grp, 16));
+              });
+
+              if (messageStr.includes('Code is not recognized')) {
+                result = 'not_found';
+              } else if (messageStr.includes('already redeemed') || messageStr.includes('was already redeemed')) {
+                result = 'already_redeemed';
+                successful++;
+              } else if (messageStr.includes('redeemed code')) {
+                result = 'success';
+                successful++;
+                const ptsMatch = messageStr.match(/for (\d+) SummerGame/);
+                if (ptsMatch) {
+                  points = parseInt(ptsMatch[1], 10);
+                  pointsGained += points;
+                }
+              }
+            } else {
+              messageStr = 'Unknown response from server';
+            }
+
+            ws.send(JSON.stringify({
+              type: 'auto_submit_progress',
+              id: codeItem.id,
+              code: codeItem.code,
+              result,
+              message: messageStr,
+              points
+            }));
+
+            // Delay for good form (750ms)
+            if (i < codes.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 750));
+            }
+          }
+
+          if (!ws.autoSubmitCancel) {
+            ws.send(JSON.stringify({ type: 'auto_submit_complete', reason: 'finished', successful, pointsGained }));
+          }
+
+        } catch (e) {
+          ws.send(JSON.stringify({ type: 'auto_submit_complete', reason: 'error', error: e.message }));
+        }
+      } else if (data.type === 'stop_auto_submit') {
+        ws.autoSubmitCancel = true;
       }
     } catch (e) {
       console.error('WS message error:', e);
