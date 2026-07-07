@@ -10,6 +10,7 @@ import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Rout
 import { useRouting } from "./hooks/useRouting";
 import Link from "next/link";
 import { Tutorial } from "./components/Tutorial";
+import Fuse from "fuse.js";
 
 // Dynamically import map to avoid SSR issues
 const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-100 font-medium text-gray-500">Loading Map...</div> });
@@ -72,6 +73,7 @@ export default function Home() {
   const [foundFilterTypes, setFoundFilterTypes] = useState({ business: true, home: true, badge: true, extra: true });
   const [showExtraCodeModal, setShowExtraCodeModal] = useState(false);
   const [isFoundFiltersOpen, setIsFoundFiltersOpen] = useState(false);
+  const [foundSearchQuery, setFoundSearchQuery] = useState("");
 
   const handleAddExtraCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -473,6 +475,21 @@ export default function Home() {
                   </button>
                   {isFoundFiltersOpen && (
                     <div className="p-5 border-t border-gray-200 flex flex-col gap-6">
+                      {/* Search */}
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Search Codes</h3>
+                        <div className="relative">
+                          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search by name, code, or notes..."
+                            value={foundSearchQuery}
+                            onChange={e => setFoundSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 bg-white shadow-inner"
+                          />
+                        </div>
+                      </div>
+                      
                       {/* Statuses */}
                       <div>
                         <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Status</h3>
@@ -530,23 +547,23 @@ export default function Home() {
                   let items: any[] = [];
                   data?.bizcodes.forEach(b => {
                     const status = itemStatuses[b.code_id];
-                    if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered });
+                    if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered, code: itemMetadata[b.code_id]?.code, notes: itemMetadata[b.code_id]?.notes });
                   });
                   data?.homecodes.forEach(h => {
                     const id = h.code_id || `home-${h.lat}-${h.lon}`;
                     const status = itemStatuses[id];
-                    if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered });
+                    if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
                   });
                   data?.badges.forEach(b => {
                     const id = `badge-${b.lat}-${b.lon}`;
                     const status = itemStatuses[id];
-                    if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered });
+                    if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
                   });
 
                   // Add Extra Codes
                   Object.keys(itemStatuses).forEach(id => {
                     if (id.startsWith('extra-') && itemStatuses[id] === 'found') {
-                       items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered });
+                       items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
                     }
                   });
 
@@ -562,6 +579,14 @@ export default function Home() {
                     
                     return true;
                   });
+
+                  if (foundSearchQuery.trim() !== '') {
+                    const fuse = new Fuse(items, {
+                      keys: ['title', 'code', 'notes'],
+                      threshold: 0.4,
+                    });
+                    items = fuse.search(foundSearchQuery).map(result => result.item);
+                  }
 
                   items.sort((a, b) => {
                     if (!a.entered && b.entered) return -1;
