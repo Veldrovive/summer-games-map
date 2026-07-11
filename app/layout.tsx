@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SyncProvider } from "./components/SyncProvider";
@@ -14,9 +14,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Summer Game Map",
   description: "An interactive map and code tracker for the AADL Summer Game.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Summer Game Map",
+  },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

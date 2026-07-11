@@ -1,0 +1,15 @@
+{
+  "name": "Summer Game Map",
+  "short_name": "SG Map",
+  "description": "An interactive map and code tracker for the AADL Summer Game.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any"
+    }
+  ]
+}

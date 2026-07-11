@@ -6,7 +6,7 @@ import { useMapData } from "./hooks/useMapData";
 import { useProgress } from "./hooks/useProgress";
 import { calculateDistance } from "./lib/distance";
 import { geocodeAddress } from "./lib/geocoding";
-import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound, HelpCircle, Bug, Copy, ExternalLink, Check } from "lucide-react";
+import { Search, MapPin, SlidersHorizontal, CheckCircle2, Navigation, List, Route as RouteIcon, Play, Wand2, Trash2, KeyRound, HelpCircle, Bug, Copy, ExternalLink, Check, X } from "lucide-react";
 import { useRouting } from "./hooks/useRouting";
 import Link from "next/link";
 import { Tutorial } from "./components/Tutorial";
@@ -18,7 +18,7 @@ const Map = dynamic(() => import("./components/Map"), { ssr: false, loading: () 
 
 export default function Home() {
   const { data, loading, error } = useMapData();
-  const { itemStatuses, setItemStatus, checkedItems, toggleItem, itemMetadata, setItemMetadata } = useProgress();
+  const { itemStatuses, setItemStatus, checkedItems, toggleItem, itemMetadata, setItemMetadata, progressState } = useProgress();
 
   const [address, setAddress] = useState("");
   const [center, setCenter] = useState(() => {
@@ -176,23 +176,23 @@ export default function Home() {
     let items: any[] = [];
     data?.bizcodes.forEach(b => {
       const status = itemStatuses[b.code_id];
-      if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered, code: itemMetadata[b.code_id]?.code, notes: itemMetadata[b.code_id]?.notes });
+      if (status === 'found') items.push({ id: b.code_id, title: b.bizcode, type: 'Business', entered: itemMetadata[b.code_id]?.entered, code: itemMetadata[b.code_id]?.code, notes: itemMetadata[b.code_id]?.notes, updatedAt: Math.max(progressState[b.code_id]?.updated_at || 0, itemMetadata[b.code_id]?.content_updated_at || itemMetadata[b.code_id]?.updated_at || 0) });
     });
     data?.homecodes.forEach(h => {
       const id = h.code_id || `home-${h.lat}-${h.lon}`;
       const status = itemStatuses[id];
-      if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
+      if (status === 'found') items.push({ id, title: h.homecode, type: 'Home', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes, updatedAt: Math.max(progressState[id]?.updated_at || 0, itemMetadata[id]?.content_updated_at || itemMetadata[id]?.updated_at || 0) });
     });
     data?.badges.forEach(b => {
       const id = `badge-${b.lat}-${b.lon}`;
       const status = itemStatuses[id];
-      if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
+      if (status === 'found') items.push({ id, title: 'Badge', type: 'Badge', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes, updatedAt: Math.max(progressState[id]?.updated_at || 0, itemMetadata[id]?.content_updated_at || itemMetadata[id]?.updated_at || 0) });
     });
 
     // Add Extra Codes
     Object.keys(itemStatuses).forEach(id => {
       if (id.startsWith('extra-') && itemStatuses[id] === 'found') {
-          items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes });
+          items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes, updatedAt: Math.max(progressState[id]?.updated_at || 0, itemMetadata[id]?.content_updated_at || itemMetadata[id]?.updated_at || 0) });
       }
     });
 
@@ -220,11 +220,11 @@ export default function Home() {
     items.sort((a, b) => {
       if (!a.entered && b.entered) return -1;
       if (a.entered && !b.entered) return 1;
-      return 0;
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
 
     return items;
-  }, [data, itemStatuses, itemMetadata, foundFilterEntered, foundFilterTypes, foundSearchQuery]);
+  }, [data, itemStatuses, itemMetadata, progressState, foundFilterEntered, foundFilterTypes, foundSearchQuery]);
 
   const autoSubmitCodes = useMemo(() => {
     return filteredFoundItems
@@ -557,8 +557,17 @@ export default function Home() {
                             placeholder="Search by name, code, or notes..."
                             value={foundSearchQuery}
                             onChange={e => setFoundSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 bg-white shadow-inner"
+                            className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 bg-white shadow-inner"
                           />
+                          {foundSearchQuery && (
+                            <button
+                              onClick={() => setFoundSearchQuery('')}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                              aria-label="Clear search"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                       

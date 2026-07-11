@@ -9,7 +9,7 @@ export type ProgressItem = {
   updated_at: number;
 };
 
-export type ItemMetadata = { notes?: string; code?: string; updated_at?: number; entered?: boolean; name?: string };
+export type ItemMetadata = { notes?: string; code?: string; updated_at?: number; entered?: boolean; name?: string; content_updated_at?: number };
 
 type ProgressContextType = {
   progressState: Record<string, ProgressItem>;
@@ -198,7 +198,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         return prev;
       }
       
-      next[id] = { ...(next[id] || {}), ...metadata, updated_at: newTimestamp };
+      const isOnlyEnteredUpdate = Object.keys(metadata).length === 1 && metadata.entered !== undefined;
+      const contentUpdatedAt = metadata.content_updated_at !== undefined ? metadata.content_updated_at : (isOnlyEnteredUpdate ? (prev[id]?.content_updated_at || prev[id]?.updated_at || newTimestamp) : newTimestamp);
+
+      next[id] = { ...(next[id] || {}), ...metadata, updated_at: newTimestamp, content_updated_at: contentUpdatedAt };
       
       if (!sideEffectsRun) {
         sideEffectsRun = true;
