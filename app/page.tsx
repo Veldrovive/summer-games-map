@@ -72,17 +72,23 @@ export default function Home() {
   const [newExtraCode, setNewExtraCode] = useState("");
   const [foundFilterEntered, setFoundFilterEntered] = useState<"all" | "entered" | "not_entered">("all");
   const [foundFilterTypes, setFoundFilterTypes] = useState({ business: true, home: true, badge: true, extra: true });
-  const [showExtraCodeModal, setShowExtraCodeModal] = useState(false);
   const [isFoundFiltersOpen, setIsFoundFiltersOpen] = useState(false);
   const [foundSearchQuery, setFoundSearchQuery] = useState("");
   const [showAutoSubmitModal, setShowAutoSubmitModal] = useState(false);
 
   const handleAddExtraCode = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newExtraName.trim()) return;
+    if (!newExtraName.trim() && !newExtraCode.trim()) return;
+
+    let finalName = newExtraName.trim();
+    if (!finalName) {
+      const savedNickname = typeof window !== 'undefined' ? localStorage.getItem('aadl_nickname') : '';
+      finalName = savedNickname ? `${savedNickname}: ${newExtraCode.trim()}` : newExtraCode.trim();
+    }
+
     const id = `extra-${Date.now()}`;
     setItemStatus(id, 'found');
-    setItemMetadata(id, { name: newExtraName.trim(), code: newExtraCode.trim() });
+    setItemMetadata(id, { name: finalName, code: newExtraCode.trim() });
     setNewExtraName("");
     setNewExtraCode("");
   };
@@ -192,7 +198,7 @@ export default function Home() {
     // Add Extra Codes
     Object.keys(itemStatuses).forEach(id => {
       if (id.startsWith('extra-') && itemStatuses[id] === 'found') {
-          items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes, updatedAt: Math.max(progressState[id]?.updated_at || 0, itemMetadata[id]?.content_updated_at || itemMetadata[id]?.updated_at || 0) });
+        items.push({ id, title: itemMetadata[id]?.name || 'Extra Code', type: 'Extra', entered: itemMetadata[id]?.entered, code: itemMetadata[id]?.code, notes: itemMetadata[id]?.notes, updatedAt: Math.max(progressState[id]?.updated_at || 0, itemMetadata[id]?.content_updated_at || itemMetadata[id]?.updated_at || 0) });
       }
     });
 
@@ -200,12 +206,12 @@ export default function Home() {
     items = items.filter(item => {
       if (foundFilterEntered === 'entered' && !item.entered) return false;
       if (foundFilterEntered === 'not_entered' && item.entered) return false;
-      
+
       if (item.type === 'Home' && !foundFilterTypes.home) return false;
       if (item.type === 'Badge' && !foundFilterTypes.badge) return false;
       if (item.type === 'Business' && !foundFilterTypes.business) return false;
       if (item.type === 'Extra' && !foundFilterTypes.extra) return false;
-      
+
       return true;
     });
 
@@ -270,10 +276,10 @@ export default function Home() {
   return (
     <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-gray-50 font-sans text-gray-900">
       <Tutorial />
-      <AutoSubmitModal 
-        isOpen={showAutoSubmitModal} 
-        onClose={() => setShowAutoSubmitModal(false)} 
-        codes={autoSubmitCodes} 
+      <AutoSubmitModal
+        isOpen={showAutoSubmitModal}
+        onClose={() => setShowAutoSubmitModal(false)}
+        codes={autoSubmitCodes}
         onCodeProcessed={(id, result) => {
           if (result === 'success' || result === 'already_redeemed') {
             setItemMetadata(id, { entered: true });
@@ -538,11 +544,11 @@ export default function Home() {
               <div className="flex flex-col gap-4 max-w-3xl mb-6">
                 {/* Accordion Filters */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                  <button 
-                    onClick={() => setIsFoundFiltersOpen(!isFoundFiltersOpen)} 
+                  <button
+                    onClick={() => setIsFoundFiltersOpen(!isFoundFiltersOpen)}
                     className="w-full px-5 py-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
-                    <span className="font-bold text-gray-700 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4"/> Filters</span>
+                    <span className="font-bold text-gray-700 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4" /> Filters</span>
                     <span className="text-gray-400 font-bold">{isFoundFiltersOpen ? '▲' : '▼'}</span>
                   </button>
                   {isFoundFiltersOpen && (
@@ -570,7 +576,7 @@ export default function Home() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Statuses */}
                       <div>
                         <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Status</h3>
@@ -594,19 +600,19 @@ export default function Home() {
                         <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Code Types</h3>
                         <div className="flex flex-wrap gap-4">
                           <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={foundFilterTypes.business} onChange={e => setFoundFilterTypes(prev => ({...prev, business: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <input type="checkbox" checked={foundFilterTypes.business} onChange={e => setFoundFilterTypes(prev => ({ ...prev, business: e.target.checked }))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
                             <span className="text-sm font-semibold text-gray-700">Business Codes</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={foundFilterTypes.home} onChange={e => setFoundFilterTypes(prev => ({...prev, home: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <input type="checkbox" checked={foundFilterTypes.home} onChange={e => setFoundFilterTypes(prev => ({ ...prev, home: e.target.checked }))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
                             <span className="text-sm font-semibold text-gray-700">Lawn Codes</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={foundFilterTypes.badge} onChange={e => setFoundFilterTypes(prev => ({...prev, badge: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <input type="checkbox" checked={foundFilterTypes.badge} onChange={e => setFoundFilterTypes(prev => ({ ...prev, badge: e.target.checked }))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
                             <span className="text-sm font-semibold text-gray-700">Badge Codes</span>
                           </label>
                           <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={foundFilterTypes.extra} onChange={e => setFoundFilterTypes(prev => ({...prev, extra: e.target.checked}))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                            <input type="checkbox" checked={foundFilterTypes.extra} onChange={e => setFoundFilterTypes(prev => ({ ...prev, extra: e.target.checked }))} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
                             <span className="text-sm font-semibold text-gray-700">Extra Codes</span>
                           </label>
                         </div>
@@ -620,13 +626,42 @@ export default function Home() {
                   <button onClick={() => setShowAutoSubmitModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors shadow-sm whitespace-nowrap">
                     Auto Submit Codes
                   </button>
-                  <button onClick={() => setShowExtraCodeModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors shadow-sm whitespace-nowrap">
-                    + Add Extra Code
-                  </button>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4 max-w-3xl">
+                {/* Add Extra Code Inline Box */}
+                <form onSubmit={handleAddExtraCode} className="p-4 sm:p-5 rounded-2xl border bg-white border-blue-200 shadow-sm transition-all flex flex-col">
+                  <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-8">
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        placeholder="Name (Optional)"
+                        value={newExtraName}
+                        onChange={(e) => setNewExtraName(e.target.value)}
+                        className="w-full py-1.5 border-b border-gray-200 bg-transparent text-sm font-bold text-gray-800 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      />
+                    </div>
+
+                    <div className="w-full md:w-auto md:min-w-[300px] flex gap-2 items-center">
+                      <input
+                        type="text"
+                        placeholder="Code..."
+                        value={newExtraCode}
+                        onChange={(e) => setNewExtraCode(e.target.value)}
+                        className="w-full flex-1 pl-3 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                      />
+                      <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow-sm whitespace-nowrap">
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
                 {(() => {
                   const items = filteredFoundItems;
 
@@ -791,43 +826,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Extra Code Modal */}
-      {showExtraCodeModal && (
-        <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-5 border-b bg-gray-50 shrink-0">
-              <h3 className="font-extrabold text-xl text-gray-800 flex items-center gap-2">
-                Add Extra Code
-              </h3>
-              <button
-                onClick={() => setShowExtraCodeModal(false)}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={(e) => {
-              handleAddExtraCode(e);
-              setShowExtraCodeModal(false);
-            }} className="p-6">
-              <p className="text-gray-600 text-sm mb-4 font-medium">Some codes are not on the map. You can log them here.</p>
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Name</label>
-                  <input type="text" placeholder="e.g. Park Bonus Code" value={newExtraName} onChange={e => setNewExtraName(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Code (optional)</label>
-                  <input type="text" placeholder="e.g. SUMMER123" value={newExtraCode} onChange={e => setNewExtraCode(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
-                </div>
-                <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-center transition-colors shadow-sm mt-2">
-                  Save Extra Code
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
